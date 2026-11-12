@@ -1,0 +1,100 @@
+# Build, test and package ztodo on Ubuntu 24.04 (Linux amd64) and macOS 15
+# (Apple Silicon). Artifacts: ztodo_<version>_amd64.deb, ztodo-<version>-Darwin.dmg.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  version:
+    name: Version consistency
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the v* tags, for README "Current release"
+      - name: Check version drift
+        run: scripts/check-version.sh
+
+  linux:
+    name: Linux (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Qt 6 + build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            qt6-base-dev qt6-qpa-plugins libgl1-mesa-dev cmake ninja-build g++ dpkg-dev fonts-dejavu-core \
+            libsodium-dev pkg-config
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DZTODO_WERROR=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package .deb
+        run: |
+          cd build
+          cpack -G DEB
+          dpkg-deb -I ztodo_*_amd64.deb
+          dpkg-deb -c ztodo_*_amd64.deb | grep -q './usr/bin/ztodo$'
+          dpkg-deb -c ztodo_*_amd64.deb | grep -q './usr/share/applications/ztodo.desktop$'
+          dpkg-deb -f ztodo_*_amd64.deb Depends | grep -q 'libsodium23'
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ztodo-linux
+          path: build/ztodo_*_amd64.deb
+          if-no-files-found: error
+
+  macos:
+    name: macOS (macos-15, arm64)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Qt + build tools (brew)
+        run: brew install qt cmake ninja libsodium pkg-config
+
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DZTODO_WERROR=ON \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package .dmg
+        run: |
+          cd build
+          cpack -G DragNDrop
+          ls -l ztodo-*-Darwin.dmg
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ztodo-macos
+          path: build/ztodo-*-Darwin.dmg
+          if-no-files-found: error

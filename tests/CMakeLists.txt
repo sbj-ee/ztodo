@@ -1,0 +1,18 @@
+find_package(Qt6 REQUIRED COMPONENTS Test)
+
+function(ztodo_test name)
+  add_executable(${name} ${name}.cpp)
+  target_link_libraries(${name} PRIVATE ztodo_core Qt6::Test ${ARGN})
+  ztodo_set_warnings(${name})
+  add_test(NAME ${name} COMMAND ${name})
+  # Isolated config dir; offscreen for widget tests.
+  set_tests_properties(${name} PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endfunction()
+
+ztodo_test(tst_store)
+ztodo_test(tst_parsing)
+ztodo_test(tst_views)
+ztodo_test(tst_update)
+if(TARGET ztodo_ui)
+  ztodo_test(tst_ui ztodo_ui)
+endif()

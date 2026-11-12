@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=ztodo
+GenericName=To-do List
+Comment=Todoist-style task manager that syncs through Box
+Exec=ztodo
+Icon=ztodo
+Terminal=false
+Categories=Office;ProjectManagement;Qt;
+Keywords=todo;task;tasks;gtd;todoist;box;
+StartupWMClass=ztodo

@@ -1,0 +1,13 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <qresource prefix="/icons">
+    <file alias="ztodo-16.png">../assets/icons/ztodo-16.png</file>
+    <file alias="ztodo-24.png">../assets/icons/ztodo-24.png</file>
+    <file alias="ztodo-32.png">../assets/icons/ztodo-32.png</file>
+    <file alias="ztodo-48.png">../assets/icons/ztodo-48.png</file>
+    <file alias="ztodo-64.png">../assets/icons/ztodo-64.png</file>
+    <file alias="ztodo-128.png">../assets/icons/ztodo-128.png</file>
+    <file alias="ztodo-256.png">../assets/icons/ztodo-256.png</file>
+    <file alias="ztodo-512.png">../assets/icons/ztodo-512.png</file>
+  </qresource>
+</RCC>
