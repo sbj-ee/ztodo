@@ -78,7 +78,7 @@ SettingsDialog::SettingsDialog(const AppSettings &current, bool welcome, QWidget
     }
     connect(buttons, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
-    connect(m_dir, &QLineEdit::textChanged, this, [this, buttons](const QString &t) {
+    connect(m_dir, &QLineEdit::textChanged, this, [buttons](const QString &t) {
         buttons->button(QDialogButtonBox::Ok)->setEnabled(!t.trimmed().isEmpty());
     });
     layout->addWidget(buttons);
