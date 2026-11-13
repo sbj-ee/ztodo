@@ -51,12 +51,19 @@ QString quoted(const QString &s)
 }
 } // namespace
 
+QString MainWindow::windowTitleFor(const QString &viewTitle)
+{
+    // "ztodo 0.1.2 — Today": which version is running, at a glance.
+    const QString app = QStringLiteral("ztodo %1").arg(QString::fromLatin1(kVersionString));
+    return viewTitle.isEmpty() ? app : app + QStringLiteral(" — ") + viewTitle;
+}
+
 MainWindow::MainWindow(Store *store, QWidget *parent)
     : QMainWindow(parent)
     , m_store(store)
 {
     setObjectName(QStringLiteral("mainWindow"));
-    setWindowTitle(QStringLiteral("ztodo"));
+    setWindowTitle(windowTitleFor(QString()));
 
     // --- sidebar ---
     m_nav = new QListWidget;
@@ -459,6 +466,7 @@ void MainWindow::refreshList()
         break;
     }
     m_title->setText(title);
+    setWindowTitle(windowTitleFor(title));
     m_empty->setText(empty);
     m_delegate->setShowProject(m_view.kind != ViewKind::Project && m_view.kind != ViewKind::Inbox);
     m_quick->setEnabled(m_view.kind != ViewKind::Completed);

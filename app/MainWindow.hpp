@@ -37,6 +37,8 @@ public:
     void undo();
     bool canUndo() const { return !m_undo.isEmpty(); }
     void runSyncCommand();
+    // "ztodo <version> — <view>" (just "ztodo <version>" without a view).
+    static QString windowTitleFor(const QString &viewTitle);
 
 protected:
     void closeEvent(QCloseEvent *e) override;

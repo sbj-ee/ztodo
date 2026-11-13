@@ -5,6 +5,7 @@
 #include "Store.hpp"
 #include "DateText.hpp"
 #include "TaskDialog.hpp"
+#include "version.hpp"
 
 #include <QLineEdit>
 #include <QMenu>
@@ -173,6 +174,20 @@ private slots:
         QVERIFY(!AppSettings::load().checkForUpdatesOnStartup);
         autoUpdate->setChecked(true);
         QVERIFY(AppSettings::load().checkForUpdatesOnStartup);
+    }
+
+    void windowTitleShowsVersion()
+    {
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+        const QString v = QString::fromLatin1(kVersionString);
+        w.setView(View{ViewKind::Inbox, {}, {}});
+        QCOMPARE(w.windowTitle(), QString("ztodo %1 — Inbox").arg(v));
+        w.setView(View{ViewKind::Today, {}, {}});
+        QCOMPARE(w.windowTitle(), QString("ztodo %1 — Today").arg(v));
+        QCOMPARE(MainWindow::windowTitleFor(QString()), QString("ztodo %1").arg(v));
     }
 
     void dueEditTextRoundTrips()
