@@ -11,7 +11,7 @@ with no account or server besides Box.
 recurring tasks, natural-language quick add, search, undo, and signed in-app
 updates. Release history: [CHANGELOG.md](CHANGELOG.md).
 
-Current release: **0.1.0**
+Current release: **0.1.1**
 
 ## Features
 

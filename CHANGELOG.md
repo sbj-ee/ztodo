@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.1.1 — unreleased
+## 0.1.1 — 2026-11-12
 
 ### Fixed
 - The menu bar was missing on Linux desktops running a global-menu service (for example a GNOME app-menu extension): Qt handed the menus to that service and hid the in-window bar, so Preferences couldn't be reached. The menu bar now always stays in the window on Linux (macOS keeps its native menu bar).
