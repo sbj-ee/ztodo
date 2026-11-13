@@ -234,6 +234,8 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
         || (start.kind == ViewKind::Label && m_store->labelName(start.id).isEmpty())) {
         start = View{};
     }
+    m_view = start;
+    refreshNav(); // the sidebar is otherwise only built on the first change
     setView(start);
     updateStatus();
     QTimer::singleShot(0, this, [this] { m_quick->setFocus(); });

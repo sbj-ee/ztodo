@@ -70,6 +70,35 @@ private slots:
         QVERIFY(store.tasks().isEmpty());
     }
 
+    void sidebarFilledOnOpen()
+    {
+        // Existing data, no change after the window opens: the sidebar must
+        // still list the views, projects and labels with their counts.
+        QTemporaryDir data;
+        {
+            Store before;
+            QVERIFY(before.open(data.path(), "test-dev"));
+            const QString pid = before.addProject("Work");
+            const QString lid = before.addLabel("phone");
+            Task t;
+            t.title = "Call client";
+            t.project = pid;
+            t.labels = {lid};
+            t.dueDate = QDate::currentDate();
+            before.addTask(t);
+        }
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+        QCOMPARE(navCount(w.nav(), "Inbox"), 0);
+        QCOMPARE(navCount(w.nav(), "Today"), 1);
+        QCOMPARE(navCount(w.nav(), "Upcoming"), 0);
+        QCOMPARE(navCount(w.nav(), "Completed"), 0);
+        QCOMPARE(navCount(w.nav(), "Work"), 1);
+        QCOMPARE(navCount(w.nav(), "phone"), 1);
+        QVERIFY(w.nav()->currentItem()); // the current view is highlighted
+    }
+
     void todayViewDefaultsToToday()
     {
         QTemporaryDir data;
