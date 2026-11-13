@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.1.3 — unreleased
+## 0.1.3 — 2026-11-12
 
 ### Fixed
 - The sidebar (Inbox, Today, Upcoming, Completed, projects, labels) was empty when ztodo opened and only appeared after the first change. It is now filled when the window opens.
