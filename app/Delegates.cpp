@@ -224,21 +224,23 @@ void NavDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMod
     const QRect r = opt.rect.adjusted(6, 1, -6, -1);
     const int kind = index.data(RoleNavKind).toInt();
     const QString name = index.data(Qt::DisplayRole).toString();
-    const QColor text = opt.palette.color(QPalette::Text);
+    // Section headers are disabled items: use the active colours for all rows.
+    const QColor text = (opt.widget ? opt.widget->palette() : opt.palette).color(QPalette::Active, QPalette::Text);
+    const bool selected = opt.state & QStyle::State_Selected;
 
     if (kind == -1) { // section header
         QFont f = opt.font;
         f.setBold(true);
         f.setPointSizeF(opt.font.pointSizeF() * 0.9);
         p->setFont(f);
-        p->setPen(theme::muted());
-        p->drawText(r.adjusted(10, 10, -10, 0), Qt::AlignLeft | Qt::AlignVCenter, name);
+        p->setPen(theme::sidebarMuted());
+        p->drawText(r.adjusted(10, 10, -10, 0), Qt::AlignLeft | Qt::AlignVCenter, name.toUpper());
         p->restore();
         return;
     }
-    if (opt.state & QStyle::State_Selected) {
+    if (selected) {
         QColor sel = theme::accent();
-        sel.setAlpha(theme::isDark() ? 70 : 45);
+        sel.setAlpha(theme::isDark() ? 115 : 80);
         p->setPen(Qt::NoPen);
         p->setBrush(sel);
         p->drawRoundedRect(r, 6, 6);
@@ -250,8 +252,8 @@ void NavDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMod
 
     const QRectF icon(r.left() + 10, r.center().y() - 8, 16, 16);
     QColor ic = index.data(RoleColor).value<QColor>();
-    if (!ic.isValid()) {
-        ic = theme::muted();
+    if (!ic.isValid() || theme::isDefaultLabelColor(ic)) {
+        ic = theme::sidebarMuted();
     }
     p->setPen(QPen(ic, 1.6));
     p->setBrush(Qt::NoBrush);
@@ -309,16 +311,18 @@ void NavDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMod
         }
     }
 
-    p->setFont(opt.font);
-    p->setPen(kind == -2 ? theme::muted() : text);
+    QFont nf = opt.font;
+    nf.setBold(selected);
+    p->setFont(nf);
+    p->setPen(kind == -2 ? theme::sidebarMuted() : text);
     const int count = index.data(RoleCount).toInt();
     const QString cs = count > 0 ? QString::number(count) : QString();
-    const QFontMetrics fm(opt.font);
+    const QFontMetrics fm(nf);
     const int cw = fm.horizontalAdvance(cs);
     const QRect textRect(int(icon.right()) + 10, r.top(), r.right() - int(icon.right()) - 20 - cw, r.height());
     p->drawText(textRect, Qt::AlignLeft | Qt::AlignVCenter, fm.elidedText(name, Qt::ElideRight, textRect.width()));
     if (!cs.isEmpty()) {
-        p->setPen(theme::muted());
+        p->setPen(selected ? text : theme::sidebarMuted());
         p->drawText(r.adjusted(0, 0, -10, 0), Qt::AlignRight | Qt::AlignVCenter, cs);
     }
     p->restore();

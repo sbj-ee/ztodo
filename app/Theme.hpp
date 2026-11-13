@@ -43,6 +43,24 @@ inline QColor hover()
     return isDark() ? QColor(255, 255, 255, 14) : QColor(0, 0, 0, 10);
 }
 
+// Sidebar: a clearly different background from the task pane, and
+// secondary text (section headers, counts) that still reads well on it.
+inline QColor sidebarBackground()
+{
+    const QColor w = QApplication::palette().color(QPalette::Active, QPalette::Window);
+    return isDark() ? w.darker(145) : w.darker(109);
+}
+inline QColor sidebarMuted()
+{
+    return isDark() ? QColor(0xc6, 0xcb, 0xd1) : QColor(0x3d, 0x42, 0x49);
+}
+inline QColor sidebarBorder()
+{
+    return isDark() ? QColor(255, 255, 255, 40) : QColor(0, 0, 0, 45);
+}
+// The default label colour (Store::addLabel) is drawn in sidebarMuted().
+inline bool isDefaultLabelColor(const QColor &c) { return c == QColor(0x8a, 0x8f, 0x98); }
+
 // Project colours offered for new projects, in turn.
 inline QColor projectColor(int i)
 {

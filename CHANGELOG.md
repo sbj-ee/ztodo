@@ -11,6 +11,9 @@ and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 ### Fixed
 - The sidebar (Inbox, Today, Upcoming, Completed, projects, labels) was empty when ztodo opened and only appeared after the first change. It is now filled when the window opens.
 
+### Changed
+- Higher-contrast sidebar: a background distinct from the task pane with a divider line, darker (light theme) or brighter (dark theme) section headers, counts and "Add project" (7:1 or better against the sidebar, up from about 3.4:1), a stronger selection highlight and a bold name for the selected view.
+
 ## 0.1.2 — 2026-11-12
 
 ### Added

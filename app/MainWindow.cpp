@@ -76,9 +76,11 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
     m_nav->setAutoFillBackground(true);
     {
         QPalette p = m_nav->palette();
-        const QColor base = p.color(QPalette::Window);
-        p.setColor(QPalette::Base, theme::isDark() ? base.darker(115) : base.lighter(102));
+        p.setColor(QPalette::Base, theme::sidebarBackground());
         m_nav->setPalette(p);
+        // A divider between the sidebar and the task pane.
+        m_nav->setStyleSheet(QStringLiteral("QListWidget#nav { border: none; border-right: 1px solid %1; }")
+                                 .arg(theme::sidebarBorder().name(QColor::HexArgb)));
     }
     connect(m_nav, &QListWidget::currentItemChanged, this, [this](QListWidgetItem *it) {
         if (!it || m_refreshing) {
