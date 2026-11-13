@@ -6,6 +6,14 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.1.1 — unreleased
+
+### Fixed
+- The menu bar was missing on Linux desktops running a global-menu service (for example a GNOME app-menu extension): Qt handed the menus to that service and hid the in-window bar, so Preferences couldn't be reached. The menu bar now always stays in the window on Linux (macOS keeps its native menu bar).
+
+### Added
+- A **Settings** menu: Preferences… (Ctrl+,), Change Data Folder…, Sync Command…, a "Check for Updates at Startup" toggle, Open Data Folder, and Open Settings File Location. Preferences used to be under File.
+
 ## 0.1.0 — 2026-11-12
 
 First version.

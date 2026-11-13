@@ -7,7 +7,7 @@ A [Todoist](https://todoist.com)-style to-do app for **Linux (amd64)** and
 folder on **Box**, so every Mac and Linux machine you use sees the same list,
 with no account or server besides Box.
 
-**0.1.0** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
+**0.1.1** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
 recurring tasks, natural-language quick add, search, undo, and signed in-app
 updates. Release history: [CHANGELOG.md](CHANGELOG.md).
 

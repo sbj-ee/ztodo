@@ -15,6 +15,7 @@
 #include <QCloseEvent>
 #include <QDesktopServices>
 #include <QDir>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QHBoxLayout>
 #include <QInputDialog>
@@ -233,6 +234,13 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
 
 void MainWindow::buildMenus()
 {
+#if !defined(Q_OS_MACOS)
+    // Keep the menu bar in the window. With a global-menu service running
+    // (com.canonical.AppMenu.Registrar, e.g. a GNOME app-menu extension) Qt
+    // would otherwise export the menus over D-Bus and hide the bar, leaving
+    // no visible way to reach Settings.
+    menuBar()->setNativeMenuBar(false);
+#endif
     QMenu *file = menuBar()->addMenu(QStringLiteral("&File"));
     QAction *newTask = file->addAction(QStringLiteral("&New Task"), this, [this] {
         m_quick->setFocus();
@@ -243,11 +251,6 @@ void MainWindow::buildMenus()
     file->addSeparator();
     QAction *sync = file->addAction(QStringLiteral("&Sync Now"), this, &MainWindow::runSyncCommand);
     sync->setShortcuts({QKeySequence(Qt::Key_F5), QKeySequence(QStringLiteral("Ctrl+R"))});
-    file->addAction(QStringLiteral("Open &Data Folder"), this,
-                    [this] { QDesktopServices::openUrl(QUrl::fromLocalFile(m_store->dir())); });
-    QAction *prefs = file->addAction(QStringLiteral("&Preferences…"), this, &MainWindow::openPreferences);
-    prefs->setShortcut(QKeySequence::Preferences);
-    prefs->setMenuRole(QAction::PreferencesRole);
     file->addSeparator();
     QAction *quit = file->addAction(QStringLiteral("&Quit"), qApp, &QApplication::closeAllWindows);
     quit->setShortcut(QKeySequence::Quit);
@@ -282,6 +285,35 @@ void MainWindow::buildMenus()
         });
         a->setShortcut(QKeySequence(QString::fromLatin1(it.key)));
     }
+
+    QMenu *settings = menuBar()->addMenu(QStringLiteral("&Settings"));
+    settings->setObjectName(QStringLiteral("settingsMenu"));
+    QAction *prefs = settings->addAction(QStringLiteral("&Preferences…"), this, &MainWindow::openPreferences);
+    prefs->setObjectName(QStringLiteral("preferencesAction"));
+    // QKeySequence::Preferences is Cmd+, on macOS but unbound on Linux.
+    prefs->setShortcut(QKeySequence(QStringLiteral("Ctrl+,")));
+    prefs->setMenuRole(QAction::PreferencesRole);
+    settings->addAction(QStringLiteral("Change &Data Folder…"), this, &MainWindow::openPreferences);
+    settings->addAction(QStringLiteral("&Sync Command…"), this, &MainWindow::openPreferences);
+    settings->addSeparator();
+    QAction *autoUpdate = settings->addAction(QStringLiteral("Check for &Updates at Startup"));
+    autoUpdate->setObjectName(QStringLiteral("autoUpdateAction"));
+    autoUpdate->setCheckable(true);
+    connect(settings, &QMenu::aboutToShow, this,
+            [autoUpdate] { autoUpdate->setChecked(AppSettings::load().checkForUpdatesOnStartup); });
+    connect(autoUpdate, &QAction::toggled, this, [](bool on) {
+        AppSettings s = AppSettings::load();
+        if (s.checkForUpdatesOnStartup != on) {
+            s.checkForUpdatesOnStartup = on;
+            s.save();
+        }
+    });
+    settings->addSeparator();
+    settings->addAction(QStringLiteral("Open Data &Folder"), this,
+                        [this] { QDesktopServices::openUrl(QUrl::fromLocalFile(m_store->dir())); });
+    settings->addAction(QStringLiteral("Open Settings &File Location"), this, [] {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(AppSettings::filePath()).absolutePath()));
+    });
 
     QMenu *help = menuBar()->addMenu(QStringLiteral("&Help"));
     help->addAction(QStringLiteral("&Quick Add Syntax"), this, [this] {

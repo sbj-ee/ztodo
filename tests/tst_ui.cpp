@@ -7,6 +7,8 @@
 #include "TaskDialog.hpp"
 
 #include <QLineEdit>
+#include <QMenu>
+#include <QMenuBar>
 #include <QListWidget>
 #include <QTemporaryDir>
 #include <QTest>
@@ -141,6 +143,36 @@ private slots:
         w.addFromText("Water plants");
         w.setView(View{ViewKind::Search, {}, "bank"});
         QCOMPARE(titles(w.taskList()), QStringList{"Call the bank"});
+    }
+
+    void menuBarStaysInWindow()
+    {
+        // With a global-menu service on the session bus, Qt hides an in-window
+        // menu bar unless it is told not to; then Settings is unreachable.
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+#if !defined(Q_OS_MACOS)
+        QVERIFY(!w.menuBar()->isNativeMenuBar());
+#endif
+        QStringList menus;
+        for (QAction *a : w.menuBar()->actions()) {
+            menus << a->text();
+        }
+        QCOMPARE(menus, (QStringList{"&File", "&Edit", "&View", "&Settings", "&Help"}));
+        auto *settings = w.findChild<QMenu *>("settingsMenu");
+        QVERIFY(settings);
+        auto *prefs = w.findChild<QAction *>("preferencesAction");
+        QVERIFY(prefs);
+        QCOMPARE(prefs->shortcut(), QKeySequence("Ctrl+,"));
+        auto *autoUpdate = w.findChild<QAction *>("autoUpdateAction");
+        QVERIFY(autoUpdate && autoUpdate->isCheckable());
+        autoUpdate->setChecked(true);
+        autoUpdate->setChecked(false);
+        QVERIFY(!AppSettings::load().checkForUpdatesOnStartup);
+        autoUpdate->setChecked(true);
+        QVERIFY(AppSettings::load().checkForUpdatesOnStartup);
     }
 
     void dueEditTextRoundTrips()
