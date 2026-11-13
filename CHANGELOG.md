@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.1.2 — unreleased
+## 0.1.2 — 2026-11-12
 
 ### Added
 - The window title shows the running version and the current view: `ztodo 0.1.2 — Today`.

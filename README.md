@@ -11,7 +11,7 @@ with no account or server besides Box.
 recurring tasks, natural-language quick add, search, undo, and signed in-app
 updates. The version is shown in the window title (`ztodo 0.1.2 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
-Current release: **0.1.1**
+Current release: **0.1.2**
 
 ## Features
 
