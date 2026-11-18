@@ -11,7 +11,7 @@ with no account or server besides Box.
 recurring tasks, natural-language quick add, search, undo, due-time reminders, and
 signed in-app updates. The version is shown in the window title (`ztodo 0.2.0 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
-Current release: **0.1.3**
+Current release: **0.2.0**
 
 ## Features
 
@@ -40,7 +40,9 @@ Current release: **0.1.3**
   valid minisign signature from the key built into the app.
 - **Reminders:** a desktop notification when a task with a time is due (optionally
   5–60 minutes before; Preferences). All-day tasks are not reminded. Each device
-  reminds for itself, and reminders missed while ztodo was closed are skipped.
+  reminds for itself, and reminders missed while ztodo was closed are skipped
+  (ztodo has to be running). It uses a system notification; if the desktop has
+  no system tray, the reminder shows in the window's status bar instead.
 - Light and dark themes follow the system.
 
 ## How syncing works
