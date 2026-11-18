@@ -21,15 +21,16 @@ inline QColor priority(int p)
         return QColor(0x8a, 0x8f, 0x98);
     }
 }
-inline QColor overdue() { return QColor(0xd1, 0x45, 0x3b); }
-inline QColor today() { return QColor(0x15, 0x9a, 0x3c); }
-inline QColor tomorrow() { return QColor(0xc0, 0x74, 0x00); }
-inline QColor thisWeek() { return QColor(0x8a, 0x4f, 0xd8); }
-
 inline bool isDark()
 {
     return QApplication::palette().color(QPalette::Window).lightness() < 128;
 }
+// Due-date colours: lighter on a dark background so they stay readable there,
+// including on the selected row.
+inline QColor overdue() { return isDark() ? QColor(0xf0, 0x7a, 0x70) : QColor(0xd1, 0x45, 0x3b); }
+inline QColor today() { return isDark() ? QColor(0x5c, 0xd6, 0x76) : QColor(0x15, 0x9a, 0x3c); }
+inline QColor tomorrow() { return isDark() ? QColor(0xf2, 0xa8, 0x3c) : QColor(0xc0, 0x74, 0x00); }
+inline QColor thisWeek() { return isDark() ? QColor(0xb7, 0x8c, 0xf0) : QColor(0x8a, 0x4f, 0xd8); }
 inline QColor muted()
 {
     return isDark() ? QColor(0x9a, 0xa0, 0xa6) : QColor(0x70, 0x75, 0x7c);

@@ -46,6 +46,7 @@ public:
 protected:
     void closeEvent(QCloseEvent *e) override;
     bool eventFilter(QObject *obj, QEvent *e) override;
+    void changeEvent(QEvent *e) override;
 
 private:
     using Change = UndoStack::Change;
@@ -74,12 +75,13 @@ private:
     void about();
     void scheduleSync();
     void updateStatus();
+    void applyTheme(); // sidebar and list colours that depend on the light/dark palette
     void checkReminders();
 
     Store *m_store;
     View m_view;
-    QListWidget *m_nav;
-    QListWidget *m_list;
+    QListWidget *m_nav = nullptr; // null until the constructor builds it (changeEvent can fire earlier)
+    QListWidget *m_list = nullptr;
     QLineEdit *m_quick;
     QLabel *m_quickPreview;
     QLabel *m_title;
@@ -97,6 +99,7 @@ private:
     UndoStack m_undo;
     QDateTime m_lastSyncRun;
     bool m_refreshing = false;
+    bool m_themePending = false;
 };
 
 } // namespace ztodo

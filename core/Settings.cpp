@@ -26,6 +26,8 @@ AppSettings AppSettings::load()
     a.dataDir = s.value(QStringLiteral("data/dir")).toString();
     a.syncCommand = s.value(QStringLiteral("data/syncCommand")).toString();
     a.checkForUpdatesOnStartup = s.value(QStringLiteral("updates/checkOnStartup"), true).toBool();
+    const QString ap = s.value(QStringLiteral("ui/appearance"), QStringLiteral("system")).toString();
+    a.appearance = (ap == QLatin1String("light") || ap == QLatin1String("dark")) ? ap : QStringLiteral("system");
     a.remindersEnabled = s.value(QStringLiteral("reminders/enabled"), true).toBool();
     a.reminderLeadMinutes = std::clamp(s.value(QStringLiteral("reminders/leadMinutes"), 0).toInt(), 0, 24 * 60);
     return a;
@@ -38,6 +40,7 @@ void AppSettings::save() const
     s.setValue(QStringLiteral("data/dir"), dataDir);
     s.setValue(QStringLiteral("data/syncCommand"), syncCommand);
     s.setValue(QStringLiteral("updates/checkOnStartup"), checkForUpdatesOnStartup);
+    s.setValue(QStringLiteral("ui/appearance"), appearance);
     s.setValue(QStringLiteral("reminders/enabled"), remindersEnabled);
     s.setValue(QStringLiteral("reminders/leadMinutes"), reminderLeadMinutes);
     s.sync();

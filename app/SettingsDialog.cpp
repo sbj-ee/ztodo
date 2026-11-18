@@ -12,6 +12,8 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 
+#include <algorithm>
+
 namespace ztodo {
 
 SettingsDialog::SettingsDialog(const AppSettings &current, bool welcome, QWidget *parent)
@@ -67,6 +69,14 @@ SettingsDialog::SettingsDialog(const AppSettings &current, bool welcome, QWidget
     m_updates->setChecked(current.checkForUpdatesOnStartup);
     form->addRow(QString(), m_updates);
 
+    m_appearance = new QComboBox;
+    m_appearance->setObjectName(QStringLiteral("appearance"));
+    m_appearance->addItem(QStringLiteral("Follow the system"), QStringLiteral("system"));
+    m_appearance->addItem(QStringLiteral("Light"), QStringLiteral("light"));
+    m_appearance->addItem(QStringLiteral("Dark"), QStringLiteral("dark"));
+    m_appearance->setCurrentIndex(std::max(0, m_appearance->findData(current.appearance)));
+    form->addRow(QStringLiteral("&Appearance:"), m_appearance);
+
     m_remind = new QCheckBox(QStringLiteral("Show a &reminder when a task with a time is due"));
     m_remind->setObjectName(QStringLiteral("remindersEnabled"));
     m_remind->setChecked(current.remindersEnabled);
@@ -114,6 +124,7 @@ AppSettings SettingsDialog::result() const
     }
     s.syncCommand = m_sync->text().trimmed();
     s.checkForUpdatesOnStartup = m_updates->isChecked();
+    s.appearance = m_appearance->currentData().toString();
     s.remindersEnabled = m_remind->isChecked();
     s.reminderLeadMinutes = m_lead->currentData().toInt();
     return s;

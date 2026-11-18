@@ -1,5 +1,6 @@
 // The main window, driven offscreen: quick add, complete, undo, views,
 // projects, and a second "device" writing to the same folder.
+#include "Appearance.hpp"
 #include "Delegates.hpp"
 #include "MainWindow.hpp"
 #include "Store.hpp"
@@ -7,8 +8,10 @@
 #include "TaskDialog.hpp"
 #include "version.hpp"
 
+#include <QApplication>
 #include <QLineEdit>
 #include <QMenu>
+#include <QRegularExpression>
 #include <QMenuBar>
 #include <QListWidget>
 #include <QTemporaryDir>
@@ -31,6 +34,13 @@ class TstUi : public QObject {
         }
         return out;
     }
+    // The colour the sidebar is painted with (set through its stylesheet).
+    static QColor navBackground(QListWidget *nav)
+    {
+        static const QRegularExpression bg("background:\\s*(#[0-9a-fA-F]{6})");
+        const auto m = bg.match(nav->styleSheet());
+        return m.hasMatch() ? QColor(m.captured(1)) : QColor();
+    }
     static int navCount(QListWidget *nav, const QString &name)
     {
         for (int i = 0; i < nav->count(); ++i) {
@@ -43,6 +53,45 @@ class TstUi : public QObject {
 
 private slots:
     void initTestCase() { qputenv("XDG_CONFIG_HOME", m_config.path().toUtf8()); }
+
+    void appearanceSwitchesThemeAndRestyles()
+    {
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+        w.show();
+        const QColor before = navBackground(w.nav());
+
+        appearance::apply(appearance::Mode::Dark);
+        QCoreApplication::processEvents();
+        QVERIFY(QApplication::palette().color(QPalette::Window).lightness() < 128);
+        // The sidebar follows: it is explicitly coloured, so it must be re-styled.
+        QTRY_VERIFY(navBackground(w.nav()).lightness() < 128);
+        // The task list too (its background was once set only at startup, leaving
+        // light text on a light list).
+        QTRY_VERIFY(w.taskList()->palette().color(QPalette::Base).lightness() < 128);
+
+        appearance::apply(appearance::Mode::Light);
+        QCoreApplication::processEvents();
+        QVERIFY(QApplication::palette().color(QPalette::Window).lightness() >= 128);
+        QTRY_VERIFY(navBackground(w.nav()).lightness() >= 128);
+        QTRY_VERIFY(w.taskList()->palette().color(QPalette::Base).lightness() >= 128);
+
+        appearance::apply(appearance::Mode::System); // back to what the platform gave us
+        QCoreApplication::processEvents();
+        QTRY_COMPARE(navBackground(w.nav()).lightness() < 128, before.lightness() < 128);
+    }
+
+    void appearanceModeParsing()
+    {
+        using appearance::Mode;
+        QVERIFY(appearance::parse("dark") == Mode::Dark);
+        QVERIFY(appearance::parse(" Light ") == Mode::Light);
+        QVERIFY(appearance::parse("garbage") == Mode::System);
+        QCOMPARE(appearance::toString(Mode::Dark), QString("dark"));
+        QVERIFY(appearance::parse(appearance::toString(Mode::System)) == Mode::System);
+    }
 
     void quickAddCompleteUndo()
     {

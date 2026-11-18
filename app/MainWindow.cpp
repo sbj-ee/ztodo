@@ -1,5 +1,6 @@
 #include "MainWindow.hpp"
 
+#include "Appearance.hpp"
 #include "DateText.hpp"
 #include "Delegates.hpp"
 #include "QuickAdd.hpp"
@@ -75,14 +76,6 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
     m_nav->setContextMenuPolicy(Qt::CustomContextMenu);
     m_nav->setMinimumWidth(190);
     m_nav->setAutoFillBackground(true);
-    {
-        QPalette p = m_nav->palette();
-        p.setColor(QPalette::Base, theme::sidebarBackground());
-        m_nav->setPalette(p);
-        // A divider between the sidebar and the task pane.
-        m_nav->setStyleSheet(QStringLiteral("QListWidget#nav { border: none; border-right: 1px solid %1; }")
-                                 .arg(theme::sidebarBorder().name(QColor::HexArgb)));
-    }
     connect(m_nav, &QListWidget::currentItemChanged, this, [this](QListWidgetItem *it) {
         if (!it || m_refreshing) {
             return;
@@ -145,11 +138,6 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
     m_list->setSelectionMode(QAbstractItemView::SingleSelection);
     m_list->installEventFilter(this);
     m_list->setAutoFillBackground(false);
-    {
-        QPalette p = m_list->palette();
-        p.setColor(QPalette::Base, p.color(QPalette::Window));
-        m_list->setPalette(p);
-    }
     v->addWidget(m_list, 1);
     m_empty = new QLabel;
     m_empty->setObjectName(QStringLiteral("emptyState"));
@@ -230,6 +218,7 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
     connect(m_store, &Store::changed, this, &MainWindow::refresh);
     connect(m_store, &Store::error, this, [this](const QString &msg) { notify(msg, false); });
 
+    applyTheme();
     buildMenus();
     QSettings s(AppSettings::filePath(), QSettings::IniFormat);
     if (!restoreGeometry(s.value(QStringLiteral("window/geometry")).toByteArray())) {
@@ -900,6 +889,38 @@ void MainWindow::runSyncCommand()
     updateStatus();
 }
 
+void MainWindow::applyTheme()
+{
+    // The task list sits on the window colour rather than the (whiter or darker)
+    // base colour.
+    QPalette lp = m_list->palette();
+    lp.setColor(QPalette::Base, QApplication::palette().color(QPalette::Window));
+    m_list->setPalette(lp);
+
+    // In the stylesheet rather than the palette: a widget with a stylesheet
+    // gets its palette managed by the style, which would undo a palette
+    // override on the next theme change.
+    m_nav->setStyleSheet(QStringLiteral("QListWidget#nav { background: %1; border: none; border-right: 1px solid %2; }")
+                             .arg(theme::sidebarBackground().name(), theme::sidebarBorder().name(QColor::HexArgb)));
+}
+
+void MainWindow::changeEvent(QEvent *e)
+{
+    QMainWindow::changeEvent(e);
+    // The light/dark palette changed (Preferences, or the desktop switched
+    // theme). Qt pushes the new palette down to child widgets after this
+    // event, which would undo the sidebar's own colour, so re-style one turn
+    // later (the timer also folds several changes into one).
+    if (e->type() == QEvent::PaletteChange && m_nav && m_list && !m_themePending) {
+        m_themePending = true;
+        QTimer::singleShot(0, this, [this] {
+            m_themePending = false;
+            applyTheme();
+            m_list->viewport()->update();
+        });
+    }
+}
+
 void MainWindow::checkReminders()
 {
     const AppSettings cfg = AppSettings::load();
@@ -946,6 +967,7 @@ void MainWindow::openPreferences()
         m_undo.clear();
     }
     s.save();
+    appearance::apply(appearance::parse(s.appearance));
     m_reminders.setLeadMinutes(s.reminderLeadMinutes);
     refresh();
 }

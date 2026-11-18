@@ -6,6 +6,15 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.3.0 — Unreleased
+
+### Added
+- **Appearance setting** (Preferences → Appearance): follow the system, or force Light or Dark. It applies immediately, no restart. Useful on Linux desktops that don't report a dark theme to Qt.
+
+### Fixed
+- The sidebar and task list now re-colour when the theme changes while ztodo is running (including when the desktop itself switches), instead of keeping the colours they were created with.
+- Due-date colours (overdue, today, tomorrow, this week) are lighter on a dark background, so the date under a selected task stays readable.
+
 ## 0.2.0 — 2026-11-18
 
 ### Added

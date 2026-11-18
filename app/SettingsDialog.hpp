@@ -25,6 +25,7 @@ private:
     QCheckBox *m_updates;
     QCheckBox *m_remind;
     QComboBox *m_lead;
+    QComboBox *m_appearance;
 };
 
 } // namespace ztodo

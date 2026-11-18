@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 0.2.0. This document describes what ztodo does and the rules it keeps.
+Version 0.3.0. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -240,6 +240,13 @@ date (and optional time), otherwise it is rejected. Empty clears the date.
 
 Per device, not synced.
 
+**Appearance.** Preferences → Appearance is *Follow the system* (default),
+*Light* or *Dark*. A forced theme uses the Fusion style with a built-in light or
+dark palette and applies immediately. The sidebar and task list re-colour on any
+palette change, including a desktop theme switch. Choosing *Follow the system*
+again restores the platform's style and palette; live following of the desktop
+theme resumes after a restart. Due-date colours are lighter on a dark background.
+
 | What | Where |
 |---|---|
 | Settings | `<config>/ztodo.ini` |
@@ -252,7 +259,7 @@ Per device, not synced.
 or `~/Library/Preferences/ztodo` (macOS).
 
 Settings keys: `data/dir`, `data/syncCommand`, `updates/checkOnStartup`
-(default true), `reminders/enabled` (default true), `reminders/leadMinutes`
+(default true), `ui/appearance` (`system`, `light` or `dark`; default `system`), `reminders/enabled` (default true), `reminders/leadMinutes`
 (default 0, 0–1440).
 
 The data folder is suggested as `<Box folder>/ztodo`, where the Box folder is
