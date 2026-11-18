@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.2.0 — Unreleased
+## 0.2.0 — 2026-11-18
 
 ### Added
 - **Reminders:** a desktop notification when a task with a due time is due, optionally 5–60 minutes early (Preferences → Remind me). Fires once per due moment, skips reminders more than 10 minutes late (no burst at startup), and fires again when a task is rescheduled or a recurring task moves on.
