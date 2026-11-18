@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.3.0 — Unreleased
+## 0.3.0 — 2026-11-18
 
 ### Added
 - **Appearance setting** (Preferences → Appearance): follow the system, or force Light or Dark. It applies immediately, no restart. Useful on Linux desktops that don't report a dark theme to Qt.
