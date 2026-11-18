@@ -83,7 +83,12 @@ TaskDialog::TaskDialog(Store *store, const Task &task, bool isNew, QWidget *pare
     dueBox->setSpacing(2);
     dueBox->addWidget(m_due);
     dueBox->addWidget(m_dueHint);
-    form->addRow(QStringLiteral("&Due:"), dueBox);
+    // addRow(QString, QLayout*) creates a QLabel with no buddy, so '&' is
+    // drawn literally. Set a buddy on an explicit label (like a QWidget field).
+    auto *dueLabel = new QLabel(QStringLiteral("&Due:"));
+    dueLabel->setObjectName(QStringLiteral("dueLabel"));
+    dueLabel->setBuddy(m_due);
+    form->addRow(dueLabel, dueBox);
 
     m_recur = new QLineEdit(task.recur);
     m_recur->setObjectName(QStringLiteral("recur"));
@@ -93,7 +98,10 @@ TaskDialog::TaskDialog(Store *store, const Task &task, bool isNew, QWidget *pare
     recurBox->setSpacing(2);
     recurBox->addWidget(m_recur);
     recurBox->addWidget(m_recurHint);
-    form->addRow(QStringLiteral("&Repeat:"), recurBox);
+    auto *recurLabel = new QLabel(QStringLiteral("&Repeat:"));
+    recurLabel->setObjectName(QStringLiteral("recurLabel"));
+    recurLabel->setBuddy(m_recur);
+    form->addRow(recurLabel, recurBox);
 
     m_priority = new QComboBox;
     m_priority->setObjectName(QStringLiteral("priority"));

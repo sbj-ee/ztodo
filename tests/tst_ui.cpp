@@ -9,6 +9,7 @@
 #include "version.hpp"
 
 #include <QApplication>
+#include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QRegularExpression>
@@ -280,6 +281,35 @@ private slots:
                 QVERIFY2(parseDue(s, today, &back, &backT), qPrintable(s));
                 QCOMPARE(back, d);
                 QCOMPARE(backT, tm);
+            }
+        }
+    }
+
+    void taskDialogMnemonicLabelsHaveBuddies()
+    {
+        // addRow(QString, QLayout*) used to create Due/Repeat labels with no
+        // buddy, so the mnemonic '&' was shown literally in the dialog.
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        Task t;
+        t.title = "Sample";
+        TaskDialog dlg(&store, t, false);
+
+        auto *dueLabel = dlg.findChild<QLabel *>("dueLabel");
+        auto *recurLabel = dlg.findChild<QLabel *>("recurLabel");
+        QVERIFY(dueLabel);
+        QVERIFY(recurLabel);
+        QCOMPARE(dueLabel->buddy(), static_cast<QWidget *>(dlg.dueEdit()));
+        auto *recur = dlg.findChild<QLineEdit *>("recur");
+        QVERIFY(recur);
+        QCOMPARE(recurLabel->buddy(), static_cast<QWidget *>(recur));
+
+        for (auto *label : dlg.findChildren<QLabel *>()) {
+            if (label->text().contains(QLatin1Char('&'))) {
+                QVERIFY2(label->buddy(),
+                         qPrintable(QStringLiteral("label '%1' (%2) has no buddy")
+                                        .arg(label->text(), label->objectName())));
             }
         }
     }

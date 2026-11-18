@@ -6,6 +6,11 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.3.1 — Unreleased
+
+### Fixed
+- The Edit Task dialog showed a literal '&' in the Due and Repeat labels. Those labels now have buddy widgets, so the mnemonic is underlined instead of drawn as text.
+
 ## 0.3.0 — 2026-11-18
 
 ### Added
