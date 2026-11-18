@@ -10,6 +10,8 @@
 #include <QSettings>
 #include <QSysInfo>
 
+#include <algorithm>
+
 namespace ztodo {
 
 QString AppSettings::filePath()
@@ -24,6 +26,8 @@ AppSettings AppSettings::load()
     a.dataDir = s.value(QStringLiteral("data/dir")).toString();
     a.syncCommand = s.value(QStringLiteral("data/syncCommand")).toString();
     a.checkForUpdatesOnStartup = s.value(QStringLiteral("updates/checkOnStartup"), true).toBool();
+    a.remindersEnabled = s.value(QStringLiteral("reminders/enabled"), true).toBool();
+    a.reminderLeadMinutes = std::clamp(s.value(QStringLiteral("reminders/leadMinutes"), 0).toInt(), 0, 24 * 60);
     return a;
 }
 
@@ -34,6 +38,8 @@ void AppSettings::save() const
     s.setValue(QStringLiteral("data/dir"), dataDir);
     s.setValue(QStringLiteral("data/syncCommand"), syncCommand);
     s.setValue(QStringLiteral("updates/checkOnStartup"), checkForUpdatesOnStartup);
+    s.setValue(QStringLiteral("reminders/enabled"), remindersEnabled);
+    s.setValue(QStringLiteral("reminders/leadMinutes"), reminderLeadMinutes);
     s.sync();
 }
 

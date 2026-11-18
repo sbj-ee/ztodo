@@ -10,6 +10,8 @@ struct AppSettings {
     QString dataDir;     // the shared folder inside Box; empty until set up
     QString syncCommand; // optional, run after changes and on Sync Now (Linux rclone)
     bool checkForUpdatesOnStartup = true;
+    bool remindersEnabled = true; // desktop notification when a task with a time is due
+    int reminderLeadMinutes = 0;  // 0 = at the due time
 
     static QString filePath();
     static AppSettings load();

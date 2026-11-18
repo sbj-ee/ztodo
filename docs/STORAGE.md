@@ -68,4 +68,7 @@ The log is written with an atomic rename.
 
 ztodo watches the folder and also re-scans it every 15 seconds, because file
 watchers miss changes on FUSE mounts and Box Drive's File Provider. Only
-files whose size or modification time changed are re-read.
+files whose size or modification time changed are re-read, and then only from the
+last complete line already applied. If the bytes just before that point have
+changed (a log that was compacted), the whole file is read again; this is safe
+because applying a change twice does nothing.

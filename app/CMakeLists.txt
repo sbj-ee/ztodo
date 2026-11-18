@@ -2,7 +2,7 @@
 add_library(ztodo_ui STATIC
   Theme.hpp
   Delegates.cpp Delegates.hpp
-  MainWindow.cpp MainWindow.hpp
+  MainWindow.cpp MainWindowNav.cpp MainWindow.hpp
   TaskDialog.cpp TaskDialog.hpp
   SettingsDialog.cpp SettingsDialog.hpp
   UpdateDialog.cpp UpdateDialog.hpp

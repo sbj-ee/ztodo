@@ -5,6 +5,7 @@
 #include <QDialog>
 
 class QCheckBox;
+class QComboBox;
 class QLineEdit;
 
 namespace ztodo {
@@ -22,6 +23,8 @@ private:
     QLineEdit *m_dir;
     QLineEdit *m_sync;
     QCheckBox *m_updates;
+    QCheckBox *m_remind;
+    QComboBox *m_lead;
 };
 
 } // namespace ztodo

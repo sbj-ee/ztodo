@@ -6,6 +6,17 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.2.0 — Unreleased
+
+### Added
+- **Reminders:** a desktop notification when a task with a due time is due, optionally 5–60 minutes early (Preferences → Remind me). Fires once per due moment, skips reminders more than 10 minutes late (no burst at startup), and fires again when a task is rescheduled or a recurring task moves on.
+
+### Changed
+- Much faster with large lists: the task, project and label lists and the subtask index are cached until the data changes, instead of being rebuilt on every call (the main window called them in loops).
+- Deleting a task with subtasks, a project, and Undo now each refresh the window once instead of once per item.
+- Log files are read incrementally: only lines appended since the last scan are parsed. A rewritten (compacted) log is detected and read in full, so nothing is missed.
+- Internal: the undo history is now `core/UndoStack` (no widgets, unit-tested), and the sidebar/project/label code moved from `MainWindow.cpp` to `MainWindowNav.cpp`.
+
 ## 0.1.3 — 2026-11-12
 
 ### Fixed

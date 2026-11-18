@@ -1,7 +1,9 @@
 #pragma once
 
+#include "Reminders.hpp"
 #include "Settings.hpp"
 #include "Store.hpp"
+#include "UndoStack.hpp"
 #include "Views.hpp"
 
 #include <QJsonObject>
@@ -12,6 +14,7 @@ class QLineEdit;
 class QListWidget;
 class QListWidgetItem;
 class QPushButton;
+class QSystemTrayIcon;
 class QTimer;
 
 namespace ztodo {
@@ -35,7 +38,7 @@ public:
     QString addFromText(const QString &text);
     void toggleComplete(const QString &taskId);
     void undo();
-    bool canUndo() const { return !m_undo.isEmpty(); }
+    bool canUndo() const { return m_undo.canUndo(); }
     void runSyncCommand();
     // "ztodo <version> — <view>" (just "ztodo <version>" without a view).
     static QString windowTitleFor(const QString &viewTitle);
@@ -45,15 +48,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *e) override;
 
 private:
-    struct Change {
-        QString kind;
-        QString id;
-        QJsonObject before;
-    };
-    struct UndoEntry {
-        QString text;
-        QList<Change> changes;
-    };
+    using Change = UndoStack::Change;
 
     void buildMenus();
     void refresh();
@@ -79,6 +74,7 @@ private:
     void about();
     void scheduleSync();
     void updateStatus();
+    void checkReminders();
 
     Store *m_store;
     View m_view;
@@ -95,7 +91,10 @@ private:
     QTimer *m_syncTimer;
     QTimer *m_notifyTimer;
     QTimer *m_midnight;
-    QList<UndoEntry> m_undo;
+    QTimer *m_remindTimer;
+    QSystemTrayIcon *m_tray = nullptr;
+    ReminderScheduler m_reminders;
+    UndoStack m_undo;
     QDateTime m_lastSyncRun;
     bool m_refreshing = false;
 };

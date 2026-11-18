@@ -1,6 +1,7 @@
 #include "SettingsDialog.hpp"
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
@@ -66,6 +67,25 @@ SettingsDialog::SettingsDialog(const AppSettings &current, bool welcome, QWidget
     m_updates->setChecked(current.checkForUpdatesOnStartup);
     form->addRow(QString(), m_updates);
 
+    m_remind = new QCheckBox(QStringLiteral("Show a &reminder when a task with a time is due"));
+    m_remind->setObjectName(QStringLiteral("remindersEnabled"));
+    m_remind->setChecked(current.remindersEnabled);
+    form->addRow(QString(), m_remind);
+    m_lead = new QComboBox;
+    m_lead->setObjectName(QStringLiteral("reminderLead"));
+    for (int m : {0, 5, 10, 15, 30, 60}) {
+        m_lead->addItem(m == 0 ? QStringLiteral("At the due time") : QStringLiteral("%1 minutes before").arg(m), m);
+    }
+    if (const int i = m_lead->findData(current.reminderLeadMinutes); i >= 0) {
+        m_lead->setCurrentIndex(i);
+    } else {
+        m_lead->addItem(QStringLiteral("%1 minutes before").arg(current.reminderLeadMinutes), current.reminderLeadMinutes);
+        m_lead->setCurrentIndex(m_lead->count() - 1);
+    }
+    m_lead->setEnabled(m_remind->isChecked());
+    connect(m_remind, &QCheckBox::toggled, m_lead, &QWidget::setEnabled);
+    form->addRow(QStringLiteral("Remind me:"), m_lead);
+
     auto *device = new QLabel(QStringLiteral("<small>This device: <tt>%1</tt></small>").arg(deviceId().toHtmlEscaped()));
     device->setTextInteractionFlags(Qt::TextSelectableByMouse);
     form->addRow(QString(), device);
@@ -94,6 +114,8 @@ AppSettings SettingsDialog::result() const
     }
     s.syncCommand = m_sync->text().trimmed();
     s.checkForUpdatesOnStartup = m_updates->isChecked();
+    s.remindersEnabled = m_remind->isChecked();
+    s.reminderLeadMinutes = m_lead->currentData().toInt();
     return s;
 }
 

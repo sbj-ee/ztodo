@@ -7,9 +7,9 @@ A [Todoist](https://todoist.com)-style to-do app for **Linux (amd64)** and
 folder on **Box**, so every Mac and Linux machine you use sees the same list,
 with no account or server besides Box.
 
-**0.1.3** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
-recurring tasks, natural-language quick add, search, undo, and signed in-app
-updates. The version is shown in the window title (`ztodo 0.1.2 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
+**0.2.0** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
+recurring tasks, natural-language quick add, search, undo, due-time reminders, and
+signed in-app updates. The version is shown in the window title (`ztodo 0.2.0 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 Current release: **0.1.3**
 
@@ -38,6 +38,9 @@ Current release: **0.1.3**
   installs the new `.deb` with `pkexec apt`; on macOS it replaces `ztodo.app`
   in place. Nothing is installed unless the release's `SHA256SUMS` carries a
   valid minisign signature from the key built into the app.
+- **Reminders:** a desktop notification when a task with a time is due (optionally
+  5–60 minutes before; Preferences). All-day tasks are not reminded. Each device
+  reminds for itself, and reminders missed while ztodo was closed are skipped.
 - Light and dark themes follow the system.
 
 ## How syncing works

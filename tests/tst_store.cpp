@@ -1,8 +1,10 @@
 // Storage: per-device op logs in a shared folder, merged last-writer-wins.
 // Two Store instances on one folder stand in for two devices syncing via Box.
 #include "Store.hpp"
+#include "UndoStack.hpp"
 
 #include <QDir>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QJsonArray>
 #include <QSignalSpy>
@@ -340,6 +342,114 @@ private slots:
         QCOMPARE(t.title, QString("v50"));
         QCOMPARE(t.notes, QString("b"));
         QCOMPARE(t.priority, 4);
+    }
+
+    void incrementalReadPicksUpAppendsAndRewrites()
+    {
+        QTemporaryDir tmp;
+        Store a, b;
+        QVERIFY(a.open(tmp.path(), "dev-a"));
+        QVERIFY(b.open(tmp.path(), "dev-b"));
+        const QString t1 = a.addTask(simple("one"));
+        QVERIFY(b.reload());
+        QCOMPARE(b.tasks().size(), 1);
+        // Appended lines only.
+        const QString t2 = a.addTask(simple("two"));
+        QVERIFY(b.reload());
+        QCOMPARE(b.tasks().size(), 2);
+        // A rewritten (compacted) log of a different shape: still converges.
+        a.setTaskFields(t1, QJsonObject{{"title", "one!"}});
+        a.setTaskFields(t1, QJsonObject{{"title", "one!!"}});
+        a.compactOwnLog();
+        a.setTaskFields(t2, QJsonObject{{"title", "two!"}});
+        QVERIFY(b.reload());
+        Task t;
+        QVERIFY(b.task(t1, &t));
+        QCOMPARE(t.title, QString("one!!"));
+        QVERIFY(b.task(t2, &t));
+        QCOMPARE(t.title, QString("two!"));
+    }
+
+    void removeEmitsOnceAndCoversNestedSubtasks()
+    {
+        QTemporaryDir tmp;
+        Store s;
+        QVERIFY(s.open(tmp.path(), "dev-a"));
+        const QString root = s.addTask(simple("root"));
+        Task c = simple("child");
+        c.parent = root;
+        const QString child = s.addTask(c);
+        Task g = simple("grandchild");
+        g.parent = child;
+        s.addTask(g);
+        s.addTask(simple("other"));
+        QSignalSpy spy(&s, &Store::changed);
+        QVERIFY(s.remove("task", root));
+        QCOMPARE(spy.count(), 1);
+        QCOMPARE(s.tasks().size(), 1);
+        QCOMPARE(s.tasks().first().title, QString("other"));
+    }
+
+    void childrenIndexAndCacheFollowChanges()
+    {
+        QTemporaryDir tmp;
+        Store s;
+        QVERIFY(s.open(tmp.path(), "dev-a"));
+        const QString p = s.addTask(simple("parent"));
+        QVERIFY(s.children(p).isEmpty());
+        Task c = simple("kid");
+        c.parent = p;
+        const QString kid = s.addTask(c);
+        QCOMPARE(s.children(p).size(), 1);
+        s.remove("task", kid);
+        QVERIFY(s.children(p).isEmpty());
+    }
+
+    void manyTasksStayFast()
+    {
+        QTemporaryDir tmp;
+        Store s;
+        QVERIFY(s.open(tmp.path(), "dev-a"));
+        for (int i = 0; i < 2000; ++i) {
+            s.addTask(simple(QString("task %1").arg(i)));
+        }
+        QElapsedTimer timer;
+        timer.start();
+        qsizetype n = 0;
+        for (int i = 0; i < 2000; ++i) {
+            n += s.tasks().size(); // cached: must not rebuild each time
+        }
+        QCOMPARE(n, qsizetype(2000) * 2000);
+        QVERIFY2(timer.elapsed() < 1000, "tasks() is not cached");
+    }
+
+    void undoStackRestoresInReverseAndBatches()
+    {
+        QTemporaryDir tmp;
+        Store s;
+        QVERIFY(s.open(tmp.path(), "dev-a"));
+        const QString id = s.addTask(simple("a"));
+        UndoStack u(2);
+        QVERIFY(!u.canUndo());
+        QVERIFY(u.undo(&s).isEmpty());
+        // Two edits recorded as one entry; the older "before" must win.
+        UndoStack::Change c1{"task", id, s.snapshot("task", id, {"title"})};
+        s.setTaskFields(id, QJsonObject{{"title", "b"}});
+        u.push("Edit", {c1});
+        u.extendLast({UndoStack::Change{"task", id, s.snapshot("task", id, {"title"})}});
+        s.setTaskFields(id, QJsonObject{{"title", "c"}});
+        QSignalSpy spy(&s, &Store::changed);
+        QCOMPARE(u.undo(&s), QString("Edit"));
+        QCOMPARE(spy.count(), 1);
+        Task t;
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.title, QString("a"));
+        // History is capped.
+        u.push("1", {});
+        u.push("2", {});
+        u.push("3", {});
+        QCOMPARE(u.size(), qsizetype(2));
+        QCOMPARE(u.lastText(), QString("3"));
     }
 
     void changedSignalOnExternalWrite()

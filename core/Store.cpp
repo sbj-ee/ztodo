@@ -193,6 +193,7 @@ void Store::close()
     m_debounce = nullptr;
     m_dir.clear();
     m_entities.clear();
+    m_maxOrder.clear();
     m_stamps.clear();
     ++m_revision;
 }
@@ -226,14 +227,16 @@ bool Store::reload()
     // "*.jsonl*" includes sync conflict copies (x.jsonl.conflict1).
     const QFileInfoList files = d.entryInfoList({QStringLiteral("*.jsonl*")}, QDir::Files, QDir::Name);
     for (const QFileInfo &fi : files) {
-        FileStamp st{fi.size(), fi.lastModified()};
         const auto it = m_stamps.constFind(fi.filePath());
-        if (it != m_stamps.cend() && it->size == st.size && it->mtime == st.mtime) {
+        if (it != m_stamps.cend() && it->size == fi.size() && it->mtime == fi.lastModified()) {
             continue;
         }
-        // Re-read the whole file: applying an op twice changes nothing, so
-        // there's no bookkeeping of what was read before.
-        if (readFile(fi.filePath())) {
+        // Only the appended part is read; applying an op twice changes
+        // nothing, so a full re-read (file rewritten) is always safe.
+        FileStamp st = it != m_stamps.cend() ? *it : FileStamp{};
+        st.size = fi.size();
+        st.mtime = fi.lastModified();
+        if (readFile(fi.filePath(), &st)) {
             any = true;
         }
         m_stamps.insert(fi.filePath(), st);
@@ -247,10 +250,43 @@ bool Store::reload()
     return any;
 }
 
-bool Store::readFile(const QString &path)
+namespace {
+constexpr qint64 kTailBytes = 32;
+
+QByteArray tailBefore(QFile &f, qint64 offset)
+{
+    const qint64 n = std::min(offset, kTailBytes);
+    if (n <= 0 || !f.seek(offset - n)) {
+        return {};
+    }
+    return f.read(n);
+}
+} // namespace
+
+Store::FileStamp Store::stampFor(const QString &path, qint64 consumed)
+{
+    const QFileInfo fi(path);
+    FileStamp st{fi.size(), fi.lastModified(), consumed, {}};
+    QFile f(path);
+    if (f.open(QIODevice::ReadOnly)) {
+        st.tail = tailBefore(f, consumed);
+    }
+    return st;
+}
+
+bool Store::readFile(const QString &path, FileStamp *stamp)
 {
     QFile f(path);
     if (!f.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    // Resume after the last complete line we applied, if the bytes before it
+    // are unchanged; otherwise start over.
+    qint64 start = 0;
+    if (stamp->offset > 0 && stamp->offset <= f.size() && tailBefore(f, stamp->offset) == stamp->tail) {
+        start = stamp->offset;
+    }
+    if (!f.seek(start)) {
         return false;
     }
     const QByteArray all = f.readAll();
@@ -268,6 +304,8 @@ bool Store::readFile(const QString &path)
             changedAny |= applyOp(op);
         }
     }
+    stamp->offset = start + pos;
+    stamp->tail = tailBefore(f, stamp->offset);
     return changedAny;
 }
 
@@ -282,6 +320,10 @@ bool Store::applyOp(const Op &op)
         if (op.ts > cur.ts || (op.ts == cur.ts && op.device > cur.dev)) {
             if (cur.v != it.value() || cur.ts == 0) {
                 changedAny = true;
+            }
+            if (it.key() == QLatin1String("order")) {
+                double &mx = m_maxOrder[op.kind]; // kept incrementally: addTask() needs it per call
+                mx = std::max(mx, it.value().toDouble());
             }
             cur.v = it.value();
             cur.ts = op.ts;
@@ -329,10 +371,13 @@ bool Store::put(const QString &kind, const QString &id, const QJsonObject &field
     }
     f.close();
     applyOp(op);
-    const QFileInfo fi(f.fileName());
-    m_stamps.insert(fi.filePath(), FileStamp{fi.size(), fi.lastModified()});
+    m_stamps.insert(QFileInfo(f.fileName()).filePath(), stampFor(f.fileName(), QFileInfo(f.fileName()).size()));
     ++m_revision;
-    emit changed();
+    if (m_batch > 0) {
+        m_batchDirty = true;
+    } else {
+        emit changed();
+    }
     return true;
 }
 
@@ -414,19 +459,36 @@ QJsonObject Store::complete(const QString &taskId, const QDate &today)
 
 bool Store::remove(const QString &kind, const QString &id)
 {
-    QJsonObject f;
-    f.insert(kDeleted, true);
-    if (!put(kind, id, f)) {
-        return false;
-    }
+    // The entity and (for a task) all its subtasks, written as one batch so
+    // listeners rebuild once.
+    QStringList ids{id};
     if (kind == kTask) {
-        for (const Task &t : tasks()) {
-            if (t.parent == id) {
-                remove(kTask, t.id);
+        ensureCache();
+        for (qsizetype i = 0; i < ids.size(); ++i) { // ids grows while we walk it
+            for (const Task &c : m_childCache.value(ids.at(i))) {
+                if (!ids.contains(c.id)) {
+                    ids << c.id;
+                }
             }
         }
     }
-    return true;
+    QJsonObject f;
+    f.insert(kDeleted, true);
+    beginBatch();
+    bool ok = true;
+    for (const QString &x : std::as_const(ids)) {
+        ok = put(kind, x, f) && ok;
+    }
+    endBatch();
+    return ok;
+}
+
+void Store::endBatch()
+{
+    if (m_batch > 0 && --m_batch == 0 && m_batchDirty) {
+        m_batchDirty = false;
+        emit changed();
+    }
 }
 
 const Store::Entity *Store::entity(const QString &kind, const QString &id) const
@@ -457,19 +519,74 @@ Task Store::toTask(const QString &id, const Entity &e) const
     return t;
 }
 
-QList<Task> Store::tasks() const
+void Store::ensureCache() const
 {
-    QList<Task> out;
-    const QString prefix = kTask + QLatin1Char(':');
+    if (m_cacheRevision == m_revision) {
+        return;
+    }
+    m_taskCache.clear();
+    m_childCache.clear();
+    m_projectCache.clear();
+    m_labelCache.clear();
+    const QString tp = kTask + QLatin1Char(':');
+    const QString pp = kProject + QLatin1Char(':');
+    const QString lp = kLabel + QLatin1Char(':');
     for (auto it = m_entities.cbegin(); it != m_entities.cend(); ++it) {
-        if (it.key().startsWith(prefix) && !it->deleted() && it->f.contains(QStringLiteral("title"))) {
-            out << toTask(it.key().mid(prefix.size()), *it);
+        const QString &k = it.key();
+        const Entity &e = *it;
+        const QString kind = k.startsWith(tp) ? kTask : k.startsWith(pp) ? kProject : kLabel;
+        if (e.deleted()) {
+            continue;
+        }
+        if (kind == kTask) {
+            if (e.f.contains(QStringLiteral("title"))) {
+                m_taskCache << toTask(k.mid(tp.size()), e);
+            }
+        } else if (kind == kProject) {
+            Project p;
+            p.id = k.mid(pp.size());
+            p.name = e.f.value(QStringLiteral("name")).v.toString();
+            p.color = e.f.value(QStringLiteral("color")).v.toString();
+            p.order = e.f.value(QStringLiteral("order")).v.toDouble();
+            if (!p.name.isEmpty()) {
+                m_projectCache << p;
+            }
+        } else {
+            Label l;
+            l.id = k.mid(lp.size());
+            l.name = e.f.value(QStringLiteral("name")).v.toString();
+            l.color = e.f.value(QStringLiteral("color")).v.toString();
+            if (!l.name.isEmpty()) {
+                m_labelCache << l;
+            }
         }
     }
-    std::sort(out.begin(), out.end(), [](const Task &a, const Task &b) {
+    std::sort(m_taskCache.begin(), m_taskCache.end(), [](const Task &a, const Task &b) {
         return a.order != b.order ? a.order < b.order : a.id < b.id;
     });
-    return out;
+    for (const Task &t : std::as_const(m_taskCache)) {
+        if (!t.parent.isEmpty()) {
+            m_childCache[t.parent] << t;
+        }
+    }
+    std::sort(m_projectCache.begin(), m_projectCache.end(), [](const Project &a, const Project &b) {
+        return a.order != b.order ? a.order < b.order : a.name.compare(b.name, Qt::CaseInsensitive) < 0;
+    });
+    std::sort(m_labelCache.begin(), m_labelCache.end(),
+              [](const Label &a, const Label &b) { return a.name.compare(b.name, Qt::CaseInsensitive) < 0; });
+    m_cacheRevision = m_revision;
+}
+
+QList<Task> Store::tasks() const
+{
+    ensureCache();
+    return m_taskCache;
+}
+
+QList<Task> Store::children(const QString &parentId) const
+{
+    ensureCache();
+    return m_childCache.value(parentId);
 }
 
 bool Store::task(const QString &id, Task *out) const
@@ -484,44 +601,14 @@ bool Store::task(const QString &id, Task *out) const
 
 QList<Project> Store::projects() const
 {
-    QList<Project> out;
-    const QString prefix = kProject + QLatin1Char(':');
-    for (auto it = m_entities.cbegin(); it != m_entities.cend(); ++it) {
-        if (it.key().startsWith(prefix) && !it->deleted()) {
-            Project p;
-            p.id = it.key().mid(prefix.size());
-            p.name = it->f.value(QStringLiteral("name")).v.toString();
-            p.color = it->f.value(QStringLiteral("color")).v.toString();
-            p.order = it->f.value(QStringLiteral("order")).v.toDouble();
-            if (!p.name.isEmpty()) {
-                out << p;
-            }
-        }
-    }
-    std::sort(out.begin(), out.end(), [](const Project &a, const Project &b) {
-        return a.order != b.order ? a.order < b.order : a.name.compare(b.name, Qt::CaseInsensitive) < 0;
-    });
-    return out;
+    ensureCache();
+    return m_projectCache;
 }
 
 QList<Label> Store::labels() const
 {
-    QList<Label> out;
-    const QString prefix = kLabel + QLatin1Char(':');
-    for (auto it = m_entities.cbegin(); it != m_entities.cend(); ++it) {
-        if (it.key().startsWith(prefix) && !it->deleted()) {
-            Label l;
-            l.id = it.key().mid(prefix.size());
-            l.name = it->f.value(QStringLiteral("name")).v.toString();
-            l.color = it->f.value(QStringLiteral("color")).v.toString();
-            if (!l.name.isEmpty()) {
-                out << l;
-            }
-        }
-    }
-    std::sort(out.begin(), out.end(),
-              [](const Label &a, const Label &b) { return a.name.compare(b.name, Qt::CaseInsensitive) < 0; });
-    return out;
+    ensureCache();
+    return m_labelCache;
 }
 
 QString Store::projectName(const QString &id) const
@@ -560,14 +647,7 @@ QString Store::findLabel(const QString &name) const
 
 double Store::nextOrder(const QString &kind) const
 {
-    double mx = 0;
-    const QString prefix = kind + QLatin1Char(':');
-    for (auto it = m_entities.cbegin(); it != m_entities.cend(); ++it) {
-        if (it.key().startsWith(prefix)) {
-            mx = std::max(mx, it->f.value(QStringLiteral("order")).v.toDouble());
-        }
-    }
-    return mx + 1;
+    return m_maxOrder.value(kind, 0) + 1;
 }
 
 qint64 Store::compactOwnLog()
@@ -610,7 +690,7 @@ qint64 Store::compactOwnLog()
         return 0;
     }
     const QFileInfo fi(ownLogPath());
-    m_stamps.insert(fi.filePath(), FileStamp{fi.size(), fi.lastModified()});
+    m_stamps.insert(fi.filePath(), stampFor(fi.filePath(), fi.size()));
     return all.size() - out.size();
 }
 

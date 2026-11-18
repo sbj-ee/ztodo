@@ -3,9 +3,11 @@
 add_library(ztodo_core STATIC
   ConfigPaths.hpp Sodium.hpp
   Store.cpp Store.hpp
+  UndoStack.cpp UndoStack.hpp
   Views.cpp Views.hpp
   DateText.cpp DateText.hpp
   Recurrence.cpp Recurrence.hpp
+  Reminders.cpp Reminders.hpp
   QuickAdd.cpp QuickAdd.hpp
   Settings.cpp Settings.hpp
   Update.cpp Update.hpp

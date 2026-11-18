@@ -111,11 +111,16 @@ public:
     QJsonObject complete(const QString &taskId, const QDate &today = QDate::currentDate());
     bool remove(const QString &kind, const QString &id); // tombstone (deleted: true); a task's subtasks too
 
+    // Group several writes into one changed() signal (nestable).
+    void beginBatch() { ++m_batch; }
+    void endBatch();
+
     // Current values of the given fields (for undo); missing fields map to null.
     QJsonObject snapshot(const QString &kind, const QString &id, const QStringList &fields) const;
 
     // --- reads (merged, without deleted entities) ---
-    QList<Task> tasks() const;
+    QList<Task> tasks() const;       // by order; cached per revision (cheap to call)
+    QList<Task> children(const QString &parentId) const; // direct subtasks, by order
     QList<Project> projects() const; // by order
     QList<Label> labels() const;     // by name
     bool task(const QString &id, Task *out) const;
@@ -152,10 +157,18 @@ private:
     struct FileStamp {
         qint64 size = -1;
         QDateTime mtime;
+        // Incremental reading: bytes up to `offset` (a line boundary) are
+        // already applied. `tail` holds the bytes just before `offset`; if
+        // they have changed (the file was rewritten, e.g. compacted) the
+        // whole file is read again, which is always safe.
+        qint64 offset = 0;
+        QByteArray tail;
     };
 
     bool applyOp(const Op &op);
-    bool readFile(const QString &path);
+    bool readFile(const QString &path, FileStamp *stamp);
+    static FileStamp stampFor(const QString &path, qint64 consumed);
+    void ensureCache() const;
     qint64 tick();
     static QString key(const QString &kind, const QString &id) { return kind + QLatin1Char(':') + id; }
     const Entity *entity(const QString &kind, const QString &id) const;
@@ -172,6 +185,16 @@ private:
     QFileSystemWatcher *m_watcher = nullptr;
     QTimer *m_poll = nullptr;
     QTimer *m_debounce = nullptr;
+    int m_batch = 0;           // >0: put() does not emit changed()
+    bool m_batchDirty = false;
+
+    // Derived lists, rebuilt lazily when m_revision moves.
+    mutable quint64 m_cacheRevision = ~quint64(0);
+    mutable QList<Task> m_taskCache;
+    mutable QHash<QString, QList<Task>> m_childCache;
+    mutable QList<Project> m_projectCache;
+    mutable QList<Label> m_labelCache;
+    QHash<QString, double> m_maxOrder; // per kind, deleted entities included; kept by applyOp()
 };
 
 } // namespace ztodo
