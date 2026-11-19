@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.5.0 — Unreleased
+## 0.5.0 — 2026-11-19
 
 ### Added
 - **Productivity stats** (View → Productivity, Ctrl+Shift+P): completed today, this week and in the last 30 days, the current and longest day streak, a 14-day chart, completions by project, the best day, and open/overdue counts. The window updates live, including changes synced from other devices. It is all worked out locally from the data folder.
