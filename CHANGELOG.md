@@ -6,6 +6,16 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.4.2 — Unreleased
+
+### Fixed
+- **A single far-future timestamp in a synced log could stop all later edits from saving, on every device.** Every device moved its clock up to the highest timestamp it read. A line with the largest possible timestamp (from corruption, or anyone with write access to the Box folder) made the next write's timestamp overflow, and readers then rejected every write from that point on. Timestamps above 2^53 are now skipped, and a device's clock only follows timestamps up to a year ahead of its wall clock. Merging is unchanged. Found by the new log fuzzer.
+- Two projects with the same name and position (for example `#Work` quick-added on two devices while offline), or two labels whose names differ only in case, could be listed in a different order on each device. Quick add then filed `#Work` tasks under a different project on each device. Ties now break on the id, so every device picks the same one. Found by the new merge test.
+
+### Added
+- `tests/tst_merge`: randomized checks that merging gives the same result whatever order, duplication or split of the logs, and that compaction never changes it, against a plain last-writer-wins model.
+- `fuzz/`: libFuzzer harnesses for the device-log reader (including a compaction check), the quick-add, date and recurrence parsers, and the updater's release JSON, `SHA256SUMS`, minisign signature and version parsing. Their seed corpus runs as tests in every build; a new CI job fuzzes each for 2 minutes.
+
 ## 0.4.1 — 2026-11-19
 
 ### Fixed

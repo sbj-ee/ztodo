@@ -92,6 +92,54 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+  fuzz:
+    name: Fuzz (libFuzzer, 2 min per target)
+    runs-on: ubuntu-24.04
+    env:
+      ASAN_OPTIONS: detect_leaks=1
+      UBSAN_OPTIONS: print_stacktrace=1
+      LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan.supp:print_suppressions=0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Qt 6 + clang
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            qt6-base-dev cmake ninja-build clang-18 libclang-rt-18-dev libsodium-dev pkg-config
+
+      - name: Configure
+        run: |
+          cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 \
+            -DZTODO_FUZZ=ON -DZTODO_SANITIZE=ON
+
+      - name: Build
+        run: cmake --build build --target fuzz_oplog fuzz_text fuzz_update
+
+      # New inputs go to a scratch corpus; the checked-in seeds are read-only.
+      # A crash, timeout or leak fails the job and its input is uploaded.
+      - name: Fuzz
+        run: |
+          mkdir -p findings
+          status=0
+          for t in fuzz_oplog fuzz_text fuzz_update; do
+            mkdir -p "work/$t"
+            echo "::group::$t"
+            build/fuzz/$t "work/$t" "fuzz/corpus/$t" \
+              -max_total_time=120 -timeout=10 -rss_limit_mb=4096 \
+              -artifact_prefix="findings/$t-" -print_final_stats=1 || status=1
+            echo "::endgroup::"
+          done
+          exit $status
+
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-findings
+          path: findings/
+          if-no-files-found: ignore
+
   macos:
     name: macOS (macos-15, arm64)
     runs-on: macos-15

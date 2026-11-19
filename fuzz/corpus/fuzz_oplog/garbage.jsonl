@@ -1,0 +1,8 @@
+{"dev":"fz","f":{"title":"x"},"id":"t1","k":"task","ts":-1}
+{"dev":"../evil","f":{"title":"x"},"id":"t1","k":"task","ts":1}
+not json
+
+   
+[1,2]
+{"dev":"fz","f":{"title":"ok"},"id":"t1","k":"task","ts":3}
+{"dev":"fz","f":{"title":"torn"

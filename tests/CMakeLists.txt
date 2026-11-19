@@ -10,6 +10,7 @@ function(ztodo_test name)
 endfunction()
 
 ztodo_test(tst_store)
+ztodo_test(tst_merge)
 ztodo_test(tst_parsing)
 ztodo_test(tst_views)
 ztodo_test(tst_reminders)

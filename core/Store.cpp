@@ -23,6 +23,16 @@ const QString kProject = QStringLiteral("project");
 const QString kLabel = QStringLiteral("label");
 const QString kDeleted = QStringLiteral("deleted");
 
+// Timestamps above 2^53 are rejected: no real clock gets there (it is year
+// ~287,000 in ms), it is the largest integer a JSON number holds exactly, and
+// it keeps tick() far from overflowing qint64.
+constexpr qint64 kMaxTs = qint64(1) << 53;
+// The hybrid clock follows timestamps it reads only up to this far ahead of
+// the wall clock. Otherwise one far-future line (corrupt, or written by
+// anyone with access to the Box folder) would drag every device's clock to
+// the end of the range, after which every new write would be rejected.
+constexpr qint64 kMaxClockLeadMs = qint64(366) * 24 * 60 * 60 * 1000;
+
 bool validKind(const QString &k)
 {
     return k == kTask || k == kProject || k == kLabel;
@@ -100,7 +110,7 @@ bool Op::fromJsonLine(const QByteArray &line, Op *out)
     op.kind = o.value(QStringLiteral("k")).toString();
     op.id = o.value(QStringLiteral("id")).toString();
     op.fields = o.value(QStringLiteral("f")).toObject();
-    if (op.ts < 0 || !validId(op.device) || !validKind(op.kind) || !validId(op.id)) {
+    if (op.ts < 0 || op.ts > kMaxTs || !validId(op.device) || !validKind(op.kind) || !validId(op.id)) {
         return false;
     }
     *out = op;
@@ -311,7 +321,9 @@ bool Store::readFile(const QString &path, FileStamp *stamp)
 
 bool Store::applyOp(const Op &op)
 {
-    m_clock = std::max(m_clock, op.ts);
+    if (op.ts <= m_now() + kMaxClockLeadMs) {
+        m_clock = std::max(m_clock, op.ts);
+    }
     Entity &e = m_entities[key(op.kind, op.id)];
     bool changedAny = false;
     for (auto it = op.fields.begin(); it != op.fields.end(); ++it) {
@@ -569,11 +581,20 @@ void Store::ensureCache() const
             m_childCache[t.parent] << t;
         }
     }
+    // Every sort ends on the id, so equal keys (two "Work" projects created
+    // offline on two devices) come out in the same order on every device;
+    // findProject()/findLabel() then pick the same one everywhere.
     std::sort(m_projectCache.begin(), m_projectCache.end(), [](const Project &a, const Project &b) {
-        return a.order != b.order ? a.order < b.order : a.name.compare(b.name, Qt::CaseInsensitive) < 0;
+        if (a.order != b.order) {
+            return a.order < b.order;
+        }
+        const int c = a.name.compare(b.name, Qt::CaseInsensitive);
+        return c != 0 ? c < 0 : a.id < b.id;
     });
-    std::sort(m_labelCache.begin(), m_labelCache.end(),
-              [](const Label &a, const Label &b) { return a.name.compare(b.name, Qt::CaseInsensitive) < 0; });
+    std::sort(m_labelCache.begin(), m_labelCache.end(), [](const Label &a, const Label &b) {
+        const int c = a.name.compare(b.name, Qt::CaseInsensitive);
+        return c != 0 ? c < 0 : a.id < b.id;
+    });
     m_cacheRevision = m_revision;
 }
 

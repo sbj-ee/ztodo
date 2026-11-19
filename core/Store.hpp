@@ -33,7 +33,7 @@ namespace ztodo {
 
 // One change: set some fields of one entity.
 struct Op {
-    qint64 ts = 0;  // hybrid clock: max(wall ms, last seen + 1)
+    qint64 ts = 0;  // hybrid clock: max(wall ms, last seen + 1); 0 .. 2^53
     QString device; // writer
     QString kind;   // "task" | "project" | "label"
     QString id;

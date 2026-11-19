@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 0.4.1. This document describes what ztodo does and the rules it keeps.
+Version 0.4.2. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -101,9 +101,13 @@ The full format is in [docs/STORAGE.md](docs/STORAGE.md). The rules that matter:
    (`{"format":"ztodo","version":1}`) is written once.
 2. **Op log.** A line is one change: `{"ts","dev","k","id","f"}`, setting the
    fields in `f` on entity `id` of kind `k`. A line that fails validation
-   (bad JSON, negative `ts`, invalid id/kind/device) is skipped.
+   (bad JSON, negative `ts` or above 2^53, invalid id/kind/device) is skipped.
 3. **Hybrid clock.** `ts` = `max(wall clock ms, highest ts seen + 1)`, so a
-   device with a slow clock still overrides what it has already read.
+   device with a slow clock still overrides what it has already read. A `ts`
+   more than a year ahead of this device's wall clock is merged normally but
+   does not advance the clock, so a single far-future line (corrupt, or
+   hostile) can't drive every device's clock to the limit and make all later
+   writes invalid.
 4. **Merge: last writer wins per field.** The value from the change with the
    highest `(ts, dev)` wins; the device id breaks exact ties. The result does
    not depend on the order files or lines are read, and reading a change twice
@@ -319,6 +323,15 @@ Nothing is installed unless it is proven to come from the release key.
   libsodium ≥ 1.0.18. C++20, no extensions. `-DZTODO_WERROR=ON` in CI.
 - `-DZTODO_SANITIZE=ON` builds with AddressSanitizer and UndefinedBehaviorSanitizer;
   CI runs the whole test suite that way on Linux, with leak checking.
+- `tests/tst_merge` checks the merge rules (§ storage) against a plain
+  last-writer-wins model over random changes from three devices: shuffled,
+  duplicated, split over conflict copies, read piecemeal, written through the
+  Store with skewed clocks, restarts and compactions.
+  `ZTODO_MERGE_SEED=<n>` reruns one seed; `ZTODO_MERGE_ROUNDS=<n>` runs more.
+- `fuzz/` holds libFuzzer harnesses for the device-log reader, the text
+  parsers and the updater's inputs. Normal builds replay `fuzz/corpus/` as
+  tests; `-DZTODO_FUZZ=ON` (clang) builds the fuzzers, and CI runs each for
+  2 minutes. How to run them: `fuzz/CMakeLists.txt`.
 - `ZTODO_DEV_OVERRIDES` (debug builds only) allows `$ZTODO_UPDATE_URL`; it is
   never in a release.
 - Tests run offscreen with `ctest`. Asset downloads and the update flow are tested

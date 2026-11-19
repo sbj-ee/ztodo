@@ -11,6 +11,8 @@
 #include <QTemporaryDir>
 #include <QTest>
 
+#include <limits>
+
 using namespace ztodo;
 
 class TstStore : public QObject {
@@ -175,6 +177,40 @@ private slots:
         QCOMPARE(t.title, QString("edited on b"));
     }
 
+    // One far-future line in the shared folder (found by fuzz_oplog) used to
+    // pull every device's clock to it; at INT64_MAX the next tick()
+    // overflowed and every later write was invalid. Now: an out-of-range ts
+    // is skipped, and a far-future one wins its own field but doesn't move
+    // the clock, so other edits keep working.
+    void farFutureLineDoesNotPoisonTheClock()
+    {
+        QTemporaryDir tmp;
+        QVERIFY(QDir(tmp.path()).mkpath("devices"));
+        QFile evil(tmp.path() + "/devices/evil.jsonl");
+        QVERIFY(evil.open(QIODevice::WriteOnly));
+        evil.write(line(std::numeric_limits<qint64>::max(), "evil", "task", "t1", "end of time"));
+        evil.write(line((qint64(1) << 53) - 1, "evil", "task", "t2", "far future"));
+        evil.close();
+
+        Store a;
+        a.setClockForTests([] { return qint64(1'800'000'000'000); });
+        QVERIFY(a.open(tmp.path(), "dev-a"));
+        Task t;
+        QVERIFY(!a.task("t1", &t)); // out of range: skipped
+        QVERIFY(a.task("t2", &t));
+        QCOMPARE(t.title, QString("far future")); // merged as usual
+
+        const QString id = a.addTask(simple("still works"));
+        QVERIFY(!id.isEmpty());
+        QVERIFY(a.setTaskFields(id, {{"title", "edited"}}));
+        Store b;
+        QVERIFY(b.open(tmp.path(), "dev-b"));
+        QVERIFY(b.task(id, &t));
+        QCOMPARE(t.title, QString("edited"));
+        const QByteArray log = readAll(a.ownLogPath());
+        QVERIFY(!log.contains("9007199254740"));
+    }
+
     void tieBreaksOnDeviceId()
     {
         QTemporaryDir tmp;
@@ -315,6 +351,35 @@ private slots:
         QCOMPARE(s.projects().size(), 1);
         s.remove("project", p);
         QCOMPARE(s.projects().size(), 0);
+    }
+
+    // Two devices offline both quick-add "#Work" (and "@home"/"@Home"): two
+    // projects with the same name and order. Every device must list them in
+    // the same order and resolve the name to the same one (the lower id),
+    // or later tasks are filed under different projects on each device.
+    void sameNameResolvesTheSameEverywhere()
+    {
+        QTemporaryDir tmp;
+        Store a;
+        Store b;
+        QVERIFY(a.open(tmp.path(), "dev-a"));
+        QVERIFY(b.open(tmp.path(), "dev-b"));
+        const QString pa = a.addProject("Work");
+        const QString pb = b.addProject("Work");
+        const QString la = a.addLabel("home");
+        const QString lb = b.addLabel("Home");
+        a.reload();
+        b.reload();
+        QCOMPARE(a.projects().size(), 2);
+        QCOMPARE(a.projects().at(0).order, a.projects().at(1).order);
+        QCOMPARE(a.projects().at(0).id, std::min(pa, pb));
+        QCOMPARE(b.projects().at(0).id, std::min(pa, pb));
+        QCOMPARE(a.findProject("work"), std::min(pa, pb));
+        QCOMPARE(b.findProject("work"), std::min(pa, pb));
+        QCOMPARE(a.labels().at(0).id, std::min(la, lb));
+        QCOMPARE(b.labels().at(0).id, std::min(la, lb));
+        QCOMPARE(a.findLabel("HOME"), std::min(la, lb));
+        QCOMPARE(b.findLabel("HOME"), std::min(la, lb));
     }
 
     void compactionKeepsState()

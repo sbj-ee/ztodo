@@ -1,0 +1,7 @@
+{"dev":"fz","f":{"color":"#4fc33a","name":"Work","order":1},"id":"p1","k":"project","ts":1794511200100}
+{"dev":"fz","f":{"color":"#8a8f98","name":"home"},"id":"l1","k":"label","ts":1794511200101}
+{"dev":"fz","f":{"created":"2026-11-19T10:00:00Z","done":false,"due":"2026-11-20T17:00","labels":["l1"],"order":1,"priority":1,"project":"p1","recur":"every week","title":"Call mom"},"id":"t1","k":"task","ts":1794511200102}
+{"dev":"fz","f":{"order":2,"parent":"t1","title":"Buy flowers","due":"2026-11-20"},"id":"t2","k":"task","ts":1794511200103}
+{"dev":"fz","f":{"title":"Call mom & dad","notes":"ask about \"Thanksgiving\""},"id":"t1","k":"task","ts":1794511200104}
+{"dev":"fz","f":{"done":true,"doneAt":"2026-11-19T12:00:00Z"},"id":"t2","k":"task","ts":1794511200105}
+{"dev":"fz","f":{"deleted":true},"id":"l1","k":"label","ts":1794511200106}

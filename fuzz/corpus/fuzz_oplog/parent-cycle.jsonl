@@ -1,0 +1,3 @@
+{"dev":"fz","f":{"parent":"t2","title":"a"},"id":"t1","k":"task","ts":1}
+{"dev":"fz","f":{"parent":"t1","title":"b"},"id":"t2","k":"task","ts":2}
+{"dev":"fz","f":{"parent":"t3","title":"self"},"id":"t3","k":"task","ts":3}
