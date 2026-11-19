@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 0.4.2 — Unreleased
+## 0.4.2 — 2026-11-19
 
 ### Fixed
 - **A single far-future timestamp in a synced log could stop all later edits from saving, on every device.** Every device moved its clock up to the highest timestamp it read. A line with the largest possible timestamp (from corruption, or anyone with write access to the Box folder) made the next write's timestamp overflow, and readers then rejected every write from that point on. Timestamps above 2^53 are now skipped, and a device's clock only follows timestamps up to a year ahead of its wall clock. Merging is unchanged. Found by the new log fuzzer.
