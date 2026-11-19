@@ -6,12 +6,14 @@
 
 class QCheckBox;
 class QComboBox;
+class QFontComboBox;
 class QLineEdit;
 
 namespace ztodo {
 
-// Where the shared data lives (the Box folder), the optional sync command and
-// update checks. With welcome = true it's the first-run setup.
+// Where the shared data lives (the Box folder), the optional sync command,
+// appearance, font, reminders and update checks. With welcome = true it's
+// the first-run setup.
 class SettingsDialog : public QDialog {
     Q_OBJECT
 public:
@@ -26,6 +28,8 @@ private:
     QCheckBox *m_remind;
     QComboBox *m_lead;
     QComboBox *m_appearance;
+    QFontComboBox *m_font;
+    QComboBox *m_fontSize;
 };
 
 } // namespace ztodo

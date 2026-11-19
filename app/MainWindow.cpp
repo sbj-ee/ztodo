@@ -1,6 +1,7 @@
 #include "MainWindow.hpp"
 
 #include "Appearance.hpp"
+#include "AppFont.hpp"
 #include "DateText.hpp"
 #include "Delegates.hpp"
 #include "QuickAdd.hpp"
@@ -21,6 +22,7 @@
 #include <QHBoxLayout>
 #include <QInputDialog>
 #include <QKeyEvent>
+#include <QFontMetrics>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -219,6 +221,7 @@ MainWindow::MainWindow(Store *store, QWidget *parent)
     connect(m_store, &Store::error, this, [this](const QString &msg) { notify(msg, false); });
 
     applyTheme();
+    applyFont();
     buildMenus();
     QSettings s(AppSettings::filePath(), QSettings::IniFormat);
     if (!restoreGeometry(s.value(QStringLiteral("window/geometry")).toByteArray())) {
@@ -889,6 +892,28 @@ void MainWindow::runSyncCommand()
     updateStatus();
 }
 
+void MainWindow::applyFont()
+{
+    if (!m_title) {
+        return;
+    }
+    QFont hf = QApplication::font();
+    hf.setPointSizeF(hf.pointSizeF() * 1.6);
+    hf.setBold(true);
+    m_title->setFont(hf);
+    if (m_quick) {
+        m_quick->setMinimumHeight(QFontMetrics(QApplication::font()).height() + 16);
+    }
+    if (m_list) {
+        m_list->viewport()->update();
+        m_list->updateGeometry();
+    }
+    if (m_nav) {
+        m_nav->viewport()->update();
+        m_nav->updateGeometry();
+    }
+}
+
 void MainWindow::applyTheme()
 {
     // The task list sits on the window colour rather than the (whiter or darker)
@@ -918,6 +943,17 @@ void MainWindow::changeEvent(QEvent *e)
             applyTheme();
             m_list->viewport()->update();
         });
+    }
+    if (e->type() == QEvent::FontChange && m_title) {
+        applyFont();
+        // The lists also get FontChange from QApplication::setFont and
+        // recompute delegate size hints themselves; just repaint.
+        if (m_list) {
+            m_list->viewport()->update();
+        }
+        if (m_nav) {
+            m_nav->viewport()->update();
+        }
     }
 }
 
@@ -968,6 +1004,7 @@ void MainWindow::openPreferences()
     }
     s.save();
     appearance::apply(appearance::parse(s.appearance));
+    appFont::apply(s.fontFamily, appFont::parseSize(s.fontSize));
     m_reminders.setLeadMinutes(s.reminderLeadMinutes);
     refresh();
 }

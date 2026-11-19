@@ -28,6 +28,10 @@ AppSettings AppSettings::load()
     a.checkForUpdatesOnStartup = s.value(QStringLiteral("updates/checkOnStartup"), true).toBool();
     const QString ap = s.value(QStringLiteral("ui/appearance"), QStringLiteral("system")).toString();
     a.appearance = (ap == QLatin1String("light") || ap == QLatin1String("dark")) ? ap : QStringLiteral("system");
+    const QString ff = s.value(QStringLiteral("ui/fontFamily")).toString().trimmed();
+    a.fontFamily = (ff.compare(QLatin1String("system"), Qt::CaseInsensitive) == 0) ? QString() : ff;
+    const QString fs = s.value(QStringLiteral("ui/fontSize"), QStringLiteral("medium")).toString().trimmed().toLower();
+    a.fontSize = (fs == QLatin1String("small") || fs == QLatin1String("large")) ? fs : QStringLiteral("medium");
     a.remindersEnabled = s.value(QStringLiteral("reminders/enabled"), true).toBool();
     a.reminderLeadMinutes = std::clamp(s.value(QStringLiteral("reminders/leadMinutes"), 0).toInt(), 0, 24 * 60);
     return a;
@@ -41,6 +45,8 @@ void AppSettings::save() const
     s.setValue(QStringLiteral("data/syncCommand"), syncCommand);
     s.setValue(QStringLiteral("updates/checkOnStartup"), checkForUpdatesOnStartup);
     s.setValue(QStringLiteral("ui/appearance"), appearance);
+    s.setValue(QStringLiteral("ui/fontFamily"), fontFamily);
+    s.setValue(QStringLiteral("ui/fontSize"), fontSize);
     s.setValue(QStringLiteral("reminders/enabled"), remindersEnabled);
     s.setValue(QStringLiteral("reminders/leadMinutes"), reminderLeadMinutes);
     s.sync();

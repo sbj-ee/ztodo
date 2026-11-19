@@ -11,6 +11,8 @@ struct AppSettings {
     QString syncCommand; // optional, run after changes and on Sync Now (Linux rclone)
     bool checkForUpdatesOnStartup = true;
     QString appearance = QStringLiteral("system"); // "system" | "light" | "dark"
+    QString fontFamily; // empty = platform default typeface
+    QString fontSize = QStringLiteral("medium"); // "small" | "medium" | "large"
     bool remindersEnabled = true; // desktop notification when a task with a time is due
     int reminderLeadMinutes = 0;  // 0 = at the due time
 

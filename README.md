@@ -7,9 +7,9 @@ A [Todoist](https://todoist.com)-style to-do app for **Linux (amd64)** and
 folder on **Box**, so every Mac and Linux machine you use sees the same list,
 with no account or server besides Box.
 
-**0.3.1** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
+**0.4.0** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
 recurring tasks, natural-language quick add, search, undo, due-time reminders, light and dark themes, and
-signed in-app updates. The version is shown in the window title (`ztodo 0.3.1 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
+signed in-app updates. The version is shown in the window title (`ztodo 0.4.0 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 Current release: **0.3.1**
 
@@ -46,6 +46,9 @@ Current release: **0.3.1**
 - **Light and dark themes** follow the system by default. If your desktop does not
   tell Qt its theme, or you just want the other one, pick **Light** or **Dark**
   under Preferences → Appearance (applies at once).
+- **Font and size** under Preferences: keep the system typeface or pick one, and
+  choose Small, Medium or Large. Medium is the platform default size; Small is
+  2 points smaller (not below 8 pt) and Large is 2 points larger. Applies at once.
 
 ## How syncing works
 

@@ -6,6 +6,11 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.4.0 — Unreleased
+
+### Added
+- **Font setting** (Preferences → Font and Size): choose a typeface, or keep the system default, and pick Small, Medium or Large. Medium is the platform default size (the look before this setting existed); Small is 2 points smaller (not below 8 pt) and Large is 2 points larger. It applies immediately, no restart.
+
 ## 0.3.1 — 2026-11-18
 
 ### Fixed

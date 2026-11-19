@@ -5,7 +5,10 @@
 #include "Theme.hpp"
 #include "Views.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <QApplication>
+#include <QFontMetrics>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QPainterPath>
@@ -15,7 +18,34 @@ namespace ztodo {
 namespace {
 constexpr int kIndent = 26;
 constexpr int kLeft = 14;
-constexpr int kCircle = 18;
+
+// Row padding chosen so Medium (the platform default font) keeps the original
+// 40 / 58 px task rows and 34 / 38 px sidebar rows at a typical 16 px line.
+int taskChrome(const QFontMetrics &fm)
+{
+    return std::max(16, int(std::lround(fm.height() * 1.5)));
+}
+
+int circleSize(const QFontMetrics &fm)
+{
+    return std::max(14, fm.height() + 2);
+}
+
+QRect circleRect(const QRect &row, int depth, const QFontMetrics &fm)
+{
+    const int cs = circleSize(fm);
+    const int x = row.left() + kLeft + depth * kIndent;
+    const int titleBand = fm.height() + taskChrome(fm) / 2;
+    const int y = row.top() + std::max(2, (titleBand - cs) / 2);
+    return QRect(x, y, cs, cs);
+}
+
+QFont metaFont(const QFont &base)
+{
+    QFont mf = base;
+    mf.setPointSizeF(std::max(7.0, base.pointSizeF() > 0 ? base.pointSizeF() * 0.86 : 8.0));
+    return mf;
+}
 
 QColor dueColor(const Task &t, const QDate &today)
 {
@@ -56,23 +86,22 @@ TaskDelegate::TaskDelegate(Store *store, QObject *parent)
 {
 }
 
-QRect TaskDelegate::circleRect(const QRect &row, int depth)
-{
-    const int x = row.left() + kLeft + depth * kIndent;
-    return QRect(x, row.top() + 11, kCircle, kCircle);
-}
-
 QSize TaskDelegate::sizeHint(const QStyleOptionViewItem &opt, const QModelIndex &index) const
 {
+    const QFontMetrics fm(opt.font);
+    const int chrome = taskChrome(fm);
     if (index.data(RoleIsHeader).toBool()) {
-        return QSize(opt.rect.width(), 40);
+        return QSize(opt.rect.width(), fm.height() + chrome);
     }
     Task t;
     if (!m_store->task(index.data(RoleTaskId).toString(), &t)) {
-        return QSize(opt.rect.width(), 40);
+        return QSize(opt.rect.width(), fm.height() + chrome);
     }
     const bool meta = t.hasDue() || !t.labels.isEmpty() || !t.notes.isEmpty() || m_showProject;
-    return QSize(opt.rect.width(), meta ? 58 : 40);
+    if (!meta) {
+        return QSize(opt.rect.width(), fm.height() + chrome);
+    }
+    return QSize(opt.rect.width(), fm.height() + QFontMetrics(metaFont(opt.font)).height() + chrome + 2);
 }
 
 void TaskDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QModelIndex &index) const
@@ -111,7 +140,8 @@ void TaskDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMo
     }
 
     // Completion circle.
-    const QRectF c = QRectF(circleRect(r, depth)).adjusted(0.5, 0.5, -0.5, -0.5);
+    const QFontMetrics titleFm(opt.font);
+    const QRectF c = QRectF(circleRect(r, depth, titleFm)).adjusted(0.5, 0.5, -0.5, -0.5);
     const QColor pc = theme::priority(t.priority);
     QColor fill = pc;
     fill.setAlpha(t.priority < 4 ? 40 : 0);
@@ -140,15 +170,15 @@ void TaskDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMo
     p->setFont(tf);
     p->setPen(t.done ? theme::muted() : text);
     const QFontMetrics fm(tf);
-    p->drawText(QRect(tx, r.top() + 9, right - tx, fm.height() + 2), Qt::AlignLeft | Qt::AlignVCenter,
+    const int titleY = r.top() + std::max(2, (taskChrome(fm) / 2 - 2));
+    p->drawText(QRect(tx, titleY, right - tx, fm.height() + 2), Qt::AlignLeft | Qt::AlignVCenter,
                 fm.elidedText(t.title, Qt::ElideRight, right - tx));
 
     // Meta line.
-    QFont mf = opt.font;
-    mf.setPointSizeF(std::max(7.0, opt.font.pointSizeF() * 0.86));
+    const QFont mf = metaFont(opt.font);
     p->setFont(mf);
     const QFontMetrics mm(mf);
-    const int my = r.top() + 33;
+    const int my = titleY + fm.height() + 2;
     int x = tx;
     auto chip = [&](const QString &s, const QColor &col) {
         if (s.isEmpty() || x >= right) {
@@ -198,7 +228,7 @@ bool TaskDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const Q
         && (event->type() == QEvent::MouseButtonRelease || event->type() == QEvent::MouseButtonPress
             || event->type() == QEvent::MouseButtonDblClick)) {
         auto *me = static_cast<QMouseEvent *>(event);
-        const QRect hit = circleRect(opt.rect, index.data(RoleDepth).toInt()).adjusted(-6, -6, 6, 6);
+        const QRect hit = circleRect(opt.rect, index.data(RoleDepth).toInt(), QFontMetrics(opt.font)).adjusted(-6, -6, 6, 6);
         if (me->button() == Qt::LeftButton && hit.contains(me->position().toPoint())) {
             if (event->type() == QEvent::MouseButtonRelease) {
                 emit toggleRequested(index.data(RoleTaskId).toString());
@@ -214,7 +244,9 @@ bool TaskDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const Q
 QSize NavDelegate::sizeHint(const QStyleOptionViewItem &opt, const QModelIndex &index) const
 {
     const int kind = index.data(RoleNavKind).toInt();
-    return QSize(opt.rect.width(), kind == -1 ? 38 : 34);
+    const int line = QFontMetrics(opt.font).height();
+    // 16 px line -> 38 px section / 34 px row, the original fixed heights.
+    return QSize(opt.rect.width(), kind == -1 ? line + line * 11 / 8 : line + line * 9 / 8);
 }
 
 void NavDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QModelIndex &index) const
@@ -250,7 +282,8 @@ void NavDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMod
         p->drawRoundedRect(r, 6, 6);
     }
 
-    const QRectF icon(r.left() + 10, r.center().y() - 8, 16, 16);
+    const int isz = std::max(14, QFontMetrics(opt.font).height());
+    const QRectF icon(r.left() + 10, r.center().y() - isz / 2.0, isz, isz);
     QColor ic = index.data(RoleColor).value<QColor>();
     if (!ic.isValid() || theme::isDefaultLabelColor(ic)) {
         ic = theme::sidebarMuted();
@@ -277,7 +310,7 @@ void NavDelegate::paint(QPainter *p, const QStyleOptionViewItem &opt, const QMod
         case ViewKind::Today: {
             p->drawRoundedRect(icon.adjusted(1, 1, -1, -1), 3, 3);
             QFont f = opt.font;
-            f.setPixelSize(9);
+            f.setPixelSize(std::max(7, isz * 9 / 16));
             f.setBold(true);
             p->setFont(f);
             p->drawText(icon.adjusted(0, 2, 0, 0), Qt::AlignCenter, QString::number(QDate::currentDate().day()));
