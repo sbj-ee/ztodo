@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Version-drift check: the CMake project() version, the top CHANGELOG heading
-# and the README header must all agree.
+# Version-drift check: the CMake project() version, the top CHANGELOG heading,
+# the README header and the SPEC.md version line must all agree.
 #   scripts/check-version.sh               # every PR / push (ci.yml)
 #   scripts/check-version.sh --tag vX.Y.Z  # tag builds (release.yml): also the
 #                                          # tag must be v$VERSION and the top
@@ -25,6 +25,9 @@ head_ver=$(sed -nE 's/^## ([0-9]+\.[0-9]+\.[0-9]+).*/\1/p' <<<"$heading")
 
 readme_ver=$(grep -m1 -oE '^\*\*[0-9]+\.[0-9]+\.[0-9]+\*\*' README.md | tr -d '*' || true)
 [ "$readme_ver" = "$version" ] || err "README header says '${readme_ver:-none}', CMakeLists.txt says $version"
+
+spec_ver=$(sed -nE 's/^Version ([0-9]+\.[0-9]+\.[0-9]+)\. .*/\1/p' SPEC.md | head -n1)
+[ "$spec_ver" = "$version" ] || err "SPEC.md says 'Version ${spec_ver:-none}', CMakeLists.txt says $version"
 
 current=$(grep -m1 -oE '^Current release: \*\*[0-9]+\.[0-9]+\.[0-9]+\*\*' README.md | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
 # "Current release" names the newest tagged release: this version, or (while

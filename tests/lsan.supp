@@ -1,0 +1,6 @@
+# LeakSanitizer suppressions for the sanitizer CI job (ci.yml, "sanitize").
+# Only system libraries that Qt loads and that keep caches until exit belong
+# here. Never suppress ztodo's own code, or Qt as a whole: a ztodo leak
+# allocated inside a Qt call would then go unreported.
+leak:libfontconfig.so
+leak:libdbus-1.so

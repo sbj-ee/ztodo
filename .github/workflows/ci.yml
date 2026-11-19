@@ -63,6 +63,35 @@ jobs:
           path: build/ztodo_*_amd64.deb
           if-no-files-found: error
 
+  sanitize:
+    name: Linux ASan + UBSan
+    runs-on: ubuntu-24.04
+    env:
+      ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1:detect_stack_use_after_return=1
+      UBSAN_OPTIONS: print_stacktrace=1
+      LSAN_OPTIONS: suppressions=${{ github.workspace }}/tests/lsan.supp:print_suppressions=0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Qt 6 + build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            qt6-base-dev qt6-qpa-plugins libgl1-mesa-dev cmake ninja-build g++ fonts-dejavu-core \
+            libsodium-dev pkg-config
+
+      # No ZTODO_WERROR here: GCC's sanitizer instrumentation causes false
+      # -Wnull-dereference / -Wmaybe-uninitialized warnings. The linux job
+      # already builds with -Werror.
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DZTODO_SANITIZE=ON
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
   macos:
     name: macOS (macos-15, arm64)
     runs-on: macos-15

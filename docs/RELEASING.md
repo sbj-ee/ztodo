@@ -1,6 +1,6 @@
 # Releasing ztodo
 
-1. Make sure `project(ztodo VERSION x.y.z)` in `CMakeLists.txt` has the version to release (every PR already bumps it, and adds its `CHANGELOG.md` entry; change nothing else). Replace "unreleased" in the CHANGELOG heading with the release date.
+1. Make sure `project(ztodo VERSION x.y.z)` in `CMakeLists.txt` has the version to release (every PR already bumps it, adds its `CHANGELOG.md` entry and updates the version line at the top of `SPEC.md`; change nothing else). Replace "unreleased" in the CHANGELOG heading with the release date.
 2. Merge to `main`, then tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 3. `.github/workflows/release.yml` builds and tests on Linux and macOS, packages
    the `.deb` and `.dmg`, writes `SHA256SUMS`, **signs it** with minisign

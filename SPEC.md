@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 0.3.0. This document describes what ztodo does and the rules it keeps.
+Version 0.4.1. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -317,6 +317,8 @@ Nothing is installed unless it is proven to come from the release key.
 
 - CMake ≥ 3.21, Qt ≥ 6.4 (Core, Gui, Widgets, Network; Test for tests),
   libsodium ≥ 1.0.18. C++20, no extensions. `-DZTODO_WERROR=ON` in CI.
+- `-DZTODO_SANITIZE=ON` builds with AddressSanitizer and UndefinedBehaviorSanitizer;
+  CI runs the whole test suite that way on Linux, with leak checking.
 - `ZTODO_DEV_OVERRIDES` (debug builds only) allows `$ZTODO_UPDATE_URL`; it is
   never in a release.
 - Tests run offscreen with `ctest`. Asset downloads and the update flow are tested
@@ -325,8 +327,8 @@ Nothing is installed unless it is proven to come from the release key.
   package on Ubuntu 24.04 and macOS 15 (arm64). Actions are pinned by commit SHA.
 - **Versioning.** The single source of truth is `project(ztodo VERSION x.y.z)`.
   Every change bumps it (semantic versioning) and adds a `CHANGELOG.md` entry;
-  `scripts/check-version.sh` enforces that CMake, the top changelog heading and
-  the README agree.
+  `scripts/check-version.sh` enforces that CMake, the top changelog heading, the
+  README and the version line at the top of this file agree.
 - **Release.** Tag `vX.Y.Z`. `.github/workflows/release.yml` builds and tests on
   both platforms, writes and signs `SHA256SUMS`, checks the signature against
   the key in the tagged source, and publishes after a reviewer approves the

@@ -7,9 +7,9 @@ A [Todoist](https://todoist.com)-style to-do app for **Linux (amd64)** and
 folder on **Box**, so every Mac and Linux machine you use sees the same list,
 with no account or server besides Box.
 
-**0.4.0** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
+**0.4.1** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
 recurring tasks, natural-language quick add, search, undo, due-time reminders, light and dark themes, and
-signed in-app updates. The version is shown in the window title (`ztodo 0.4.0 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
+signed in-app updates. The version is shown in the window title (`ztodo 0.4.1 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 Current release: **0.4.0**
 
@@ -101,8 +101,18 @@ Download from the [latest release](https://github.com/sbj-ee/ztodo/releases/late
 
 - **Linux (Debian/Ubuntu, amd64):** `sudo apt install ./ztodo_<version>_amd64.deb`
 - **macOS (Apple Silicon, 14+):** open `ztodo-<version>-Darwin.dmg` and drag
-  `ztodo.app` to Applications. The app is ad-hoc signed, so the first time,
-  right-click it and choose **Open**.
+  `ztodo.app` to Applications. The app is ad-hoc signed, not notarized, so
+  macOS blocks the first launch:
+  - **macOS 15 (Sequoia) and later:** open ztodo once and dismiss the warning,
+    then go to **System Settings → Privacy & Security**, scroll to the message
+    about ztodo, click **Open Anyway** and confirm. Right-click → Open no
+    longer skips this check on macOS 15.
+  - **macOS 14 (Sonoma):** right-click `ztodo.app`, choose **Open**, then
+    **Open** again.
+  - Or, from a terminal on any version:
+    `xattr -dr com.apple.quarantine /Applications/ztodo.app`
+
+  You only need to do this once. In-app updates don't trigger the warning again.
 
 To check a download by hand:
 

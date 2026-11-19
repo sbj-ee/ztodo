@@ -6,6 +6,15 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.4.1 — Unreleased
+
+### Fixed
+- README: the macOS first-launch steps. Right-click → Open no longer gets past Gatekeeper on macOS 15 (Sequoia) and later; the README now gives the System Settings → Privacy & Security → **Open Anyway** steps, the macOS 14 steps, and an `xattr` one-liner.
+- SPEC.md said version 0.3.0. `scripts/check-version.sh` now also checks the SPEC.md version line, so it can't fall behind again.
+
+### Added
+- `-DZTODO_SANITIZE=ON` builds with AddressSanitizer and UndefinedBehaviorSanitizer. A new CI job runs the whole test suite that way on Linux, with leak checking.
+
 ## 0.4.0 — 2026-11-19
 
 ### Added

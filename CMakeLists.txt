@@ -14,7 +14,7 @@ endif()
 # Single source of truth for the version: bump ONLY the VERSION here.
 # configure_file() turns it into generated/version.hpp (window title, About,
 # --version, update checks); CPack names the .deb / .dmg from PROJECT_VERSION.
-project(ztodo VERSION 0.4.0 LANGUAGES C CXX)
+project(ztodo VERSION 0.4.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -28,6 +28,15 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 option(ZTODO_BUILD_TESTS "Build the Qt Test suite" ON)
+
+# AddressSanitizer + UndefinedBehaviorSanitizer for ztodo's own code (CI runs
+# the tests this way). Any UB report aborts, so a finding fails the test.
+option(ZTODO_SANITIZE "Build with -fsanitize=address,undefined" OFF)
+if(ZTODO_SANITIZE)
+  add_compile_options(-fsanitize=address,undefined -fno-sanitize-recover=all
+                      -fno-omit-frame-pointer)
+  add_link_options(-fsanitize=address,undefined)
+endif()
 
 find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Widgets Network)
 # libsodium: Ed25519 for the minisign signature on release SHA256SUMS.
