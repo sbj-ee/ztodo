@@ -76,6 +76,7 @@ private:
     void scheduleSync();
     void updateStatus();
     void applyTheme(); // sidebar and list colours that depend on the light/dark palette
+    void applyFont();  // view title, quick-add height, and list row sizes for the app font
     void checkReminders();
 
     Store *m_store;

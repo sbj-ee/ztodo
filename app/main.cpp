@@ -1,5 +1,6 @@
 #include "ConfigPaths.hpp"
 #include "Appearance.hpp"
+#include "AppFont.hpp"
 #include "MainWindow.hpp"
 #include "Settings.hpp"
 #include "SettingsDialog.hpp"
@@ -53,6 +54,7 @@ int main(int argc, char *argv[])
 
     ztodo::AppSettings settings = ztodo::AppSettings::load();
     ztodo::appearance::apply(ztodo::appearance::parse(settings.appearance));
+    ztodo::appFont::apply(settings.fontFamily, ztodo::appFont::parseSize(settings.fontSize));
     ztodo::Store store;
     bool welcome = settings.dataDir.isEmpty();
     for (;;) {
@@ -63,6 +65,7 @@ int main(int argc, char *argv[])
             }
             settings = dlg.result();
             ztodo::appearance::apply(ztodo::appearance::parse(settings.appearance));
+            ztodo::appFont::apply(settings.fontFamily, ztodo::appFont::parseSize(settings.fontSize));
         }
         QString err;
         if (store.open(settings.dataDir, ztodo::deviceId(), &err)) {

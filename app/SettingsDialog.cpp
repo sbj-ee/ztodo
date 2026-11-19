@@ -5,6 +5,7 @@
 #include <QDialogButtonBox>
 #include <QDir>
 #include <QFileDialog>
+#include <QFontComboBox>
 #include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -52,7 +53,10 @@ SettingsDialog::SettingsDialog(const AppSettings &current, bool welcome, QWidget
     auto *dirRow = new QHBoxLayout;
     dirRow->addWidget(m_dir, 1);
     dirRow->addWidget(browse);
-    form->addRow(QStringLiteral("&Data folder:"), dirRow);
+    auto *dirLabel = new QLabel(QStringLiteral("&Data folder:"));
+    dirLabel->setObjectName(QStringLiteral("dataDirLabel"));
+    dirLabel->setBuddy(m_dir);
+    form->addRow(dirLabel, dirRow);
 
     m_sync = new QLineEdit(welcome && current.syncCommand.isEmpty() ? suggestedSyncCommand() : current.syncCommand);
     m_sync->setObjectName(QStringLiteral("syncCommand"));
@@ -76,6 +80,36 @@ SettingsDialog::SettingsDialog(const AppSettings &current, bool welcome, QWidget
     m_appearance->addItem(QStringLiteral("Dark"), QStringLiteral("dark"));
     m_appearance->setCurrentIndex(std::max(0, m_appearance->findData(current.appearance)));
     form->addRow(QStringLiteral("&Appearance:"), m_appearance);
+
+    m_font = new QFontComboBox;
+    m_font->setObjectName(QStringLiteral("fontFamily"));
+    m_font->insertItem(0, QStringLiteral("System default"));
+    if (current.fontFamily.isEmpty()) {
+        m_font->setCurrentIndex(0);
+    } else {
+        const int i = m_font->findText(current.fontFamily);
+        if (i > 0) {
+            m_font->setCurrentIndex(i);
+        } else {
+            m_font->addItem(current.fontFamily);
+            m_font->setCurrentIndex(m_font->count() - 1);
+        }
+    }
+    auto *fontLabel = new QLabel(QStringLiteral("&Font:"));
+    fontLabel->setObjectName(QStringLiteral("fontFamilyLabel"));
+    fontLabel->setBuddy(m_font);
+    form->addRow(fontLabel, m_font);
+
+    m_fontSize = new QComboBox;
+    m_fontSize->setObjectName(QStringLiteral("fontSize"));
+    m_fontSize->addItem(QStringLiteral("Small"), QStringLiteral("small"));
+    m_fontSize->addItem(QStringLiteral("Medium"), QStringLiteral("medium"));
+    m_fontSize->addItem(QStringLiteral("Large"), QStringLiteral("large"));
+    m_fontSize->setCurrentIndex(std::max(0, m_fontSize->findData(current.fontSize)));
+    auto *fontSizeLabel = new QLabel(QStringLiteral("&Size:"));
+    fontSizeLabel->setObjectName(QStringLiteral("fontSizeLabel"));
+    fontSizeLabel->setBuddy(m_fontSize);
+    form->addRow(fontSizeLabel, m_fontSize);
 
     m_remind = new QCheckBox(QStringLiteral("Show a &reminder when a task with a time is due"));
     m_remind->setObjectName(QStringLiteral("remindersEnabled"));
@@ -125,6 +159,8 @@ AppSettings SettingsDialog::result() const
     s.syncCommand = m_sync->text().trimmed();
     s.checkForUpdatesOnStartup = m_updates->isChecked();
     s.appearance = m_appearance->currentData().toString();
+    s.fontFamily = (m_font->currentIndex() == 0) ? QString() : m_font->currentText();
+    s.fontSize = m_fontSize->currentData().toString();
     s.remindersEnabled = m_remind->isChecked();
     s.reminderLeadMinutes = m_lead->currentData().toInt();
     return s;

@@ -2,6 +2,7 @@
 add_library(ztodo_ui STATIC
   Theme.hpp
   Appearance.cpp Appearance.hpp
+  AppFont.cpp AppFont.hpp
   Delegates.cpp Delegates.hpp
   MainWindow.cpp MainWindowNav.cpp MainWindow.hpp
   TaskDialog.cpp TaskDialog.hpp

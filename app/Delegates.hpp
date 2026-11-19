@@ -32,8 +32,6 @@ public:
     bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &opt,
                      const QModelIndex &index) override;
 
-    static QRect circleRect(const QRect &row, int depth);
-
 signals:
     void toggleRequested(const QString &taskId);
 

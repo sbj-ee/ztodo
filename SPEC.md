@@ -247,6 +247,15 @@ palette change, including a desktop theme switch. Choosing *Follow the system*
 again restores the platform's style and palette; live following of the desktop
 theme resumes after a restart. Due-date colours are lighter on a dark background.
 
+**Font.** Preferences → Font is *System default* (default) or a typeface from
+`QFontComboBox`. Preferences → Size is *Small*, *Medium* (default) or *Large*.
+Medium is the platform default point size, captured when the setting is first
+applied so later changes have a stable baseline. Small is that size minus 2
+points, not below 8 pt; Large is that size plus 2 points. `QApplication::setFont`
+applies immediately at startup and when Preferences is accepted; the view title
+(1.6× the app font), quick-add height, and custom-painted task and sidebar
+rows scale with it.
+
 | What | Where |
 |---|---|
 | Settings | `<config>/ztodo.ini` |
@@ -259,7 +268,10 @@ theme resumes after a restart. Due-date colours are lighter on a dark background
 or `~/Library/Preferences/ztodo` (macOS).
 
 Settings keys: `data/dir`, `data/syncCommand`, `updates/checkOnStartup`
-(default true), `ui/appearance` (`system`, `light` or `dark`; default `system`), `reminders/enabled` (default true), `reminders/leadMinutes`
+(default true), `ui/appearance` (`system`, `light` or `dark`; default `system`),
+`ui/fontFamily` (empty or `system` = platform typeface; otherwise a family
+name), `ui/fontSize` (`small`, `medium` or `large`; default `medium`; any other
+value loads as `medium`), `reminders/enabled` (default true), `reminders/leadMinutes`
 (default 0, 0–1440).
 
 The data folder is suggested as `<Box folder>/ztodo`, where the Box folder is

@@ -1,14 +1,19 @@
 // The main window, driven offscreen: quick add, complete, undo, views,
 // projects, and a second "device" writing to the same folder.
 #include "Appearance.hpp"
+#include "AppFont.hpp"
 #include "Delegates.hpp"
 #include "MainWindow.hpp"
 #include "Store.hpp"
 #include "DateText.hpp"
+#include "SettingsDialog.hpp"
 #include "TaskDialog.hpp"
 #include "version.hpp"
 
 #include <QApplication>
+#include <QFontInfo>
+#include <QComboBox>
+#include <QFontComboBox>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
@@ -304,6 +309,121 @@ private slots:
         auto *recur = dlg.findChild<QLineEdit *>("recur");
         QVERIFY(recur);
         QCOMPARE(recurLabel->buddy(), static_cast<QWidget *>(recur));
+
+        for (auto *label : dlg.findChildren<QLabel *>()) {
+            if (label->text().contains(QLatin1Char('&'))) {
+                QVERIFY2(label->buddy(),
+                         qPrintable(QStringLiteral("label '%1' (%2) has no buddy")
+                                        .arg(label->text(), label->objectName())));
+            }
+        }
+    }
+
+    void fontSettingsRoundTrip()
+    {
+        const AppSettings previous = AppSettings::load();
+        AppSettings a = previous;
+        QCOMPARE(AppSettings{}.fontFamily, QString());
+        QCOMPARE(AppSettings{}.fontSize, QString("medium"));
+
+        a.fontFamily = QStringLiteral("DejaVu Sans");
+        a.fontSize = QStringLiteral("large");
+        a.save();
+        AppSettings b = AppSettings::load();
+        QCOMPARE(b.fontFamily, QString("DejaVu Sans"));
+        QCOMPARE(b.fontSize, QString("large"));
+
+        a.fontFamily = QStringLiteral("system");
+        a.fontSize = QStringLiteral("SMALL");
+        a.save();
+        b = AppSettings::load();
+        QCOMPARE(b.fontFamily, QString());
+        QCOMPARE(b.fontSize, QString("small"));
+
+        a.fontSize = QStringLiteral("huge");
+        a.save();
+        QCOMPARE(AppSettings::load().fontSize, QString("medium"));
+        previous.save();
+    }
+
+    void fontSizeMapping()
+    {
+        using appFont::Size;
+        QCOMPARE(appFont::pointSizeFor(Size::Medium, 11.0), 11.0);
+        QCOMPARE(appFont::pointSizeFor(Size::Small, 11.0), 9.0);
+        QCOMPARE(appFont::pointSizeFor(Size::Large, 11.0), 13.0);
+        QCOMPARE(appFont::pointSizeFor(Size::Small, 8.0), 8.0);
+        QCOMPARE(appFont::pointSizeFor(Size::Small, 9.0), 8.0);
+        QVERIFY(appFont::parseSize("small") == Size::Small);
+        QVERIFY(appFont::parseSize(" LARGE ") == Size::Large);
+        QVERIFY(appFont::parseSize("garbage") == Size::Medium);
+        QCOMPARE(appFont::sizeToString(Size::Small), QString("small"));
+        QVERIFY(appFont::parseSize(appFont::sizeToString(Size::Medium)) == Size::Medium);
+        QVERIFY(appFont::isSystemFamily(QString()));
+        QVERIFY(appFont::isSystemFamily(QStringLiteral(" System ")));
+        QVERIFY(!appFont::isSystemFamily(QStringLiteral("DejaVu Sans")));
+        const QFont resolved = appFont::resolve(QStringLiteral("Times New Roman"), Size::Medium);
+        QCOMPARE(resolved.family(), QString("Times New Roman"));
+    }
+
+    void fontApplyChangesAppFont()
+    {
+        appFont::apply(QString(), appFont::Size::Medium);
+        const qreal mid = appFont::systemDefault().pointSizeF() > 0
+            ? QFontInfo(appFont::systemDefault()).pointSizeF()
+            : QFontInfo(QApplication::font()).pointSizeF();
+        const qreal large = appFont::pointSizeFor(appFont::Size::Large, mid);
+        const qreal small = appFont::pointSizeFor(appFont::Size::Small, mid);
+
+        appFont::apply(QString(), appFont::Size::Large);
+        QCOMPARE(QApplication::font().pointSizeF(), large);
+
+        appFont::apply(QString(), appFont::Size::Small);
+        QCOMPARE(QApplication::font().pointSizeF(), small);
+
+        appFont::apply(QStringLiteral("Times New Roman"), appFont::Size::Medium);
+        QCOMPARE(QApplication::font().family(), QString("Times New Roman"));
+        QCOMPARE(QApplication::font().pointSizeF(), appFont::pointSizeFor(appFont::Size::Medium, mid));
+
+        appFont::apply(QString(), appFont::Size::Medium);
+        QCOMPARE(QApplication::font().pointSizeF(), appFont::pointSizeFor(appFont::Size::Medium, mid));
+    }
+
+    void fontApplyUpdatesMainWindowTitle()
+    {
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+        w.show();
+        appFont::apply(QString(), appFont::Size::Medium);
+        QCoreApplication::processEvents();
+        auto *title = w.findChild<QLabel *>("viewTitle");
+        QVERIFY(title);
+        const qreal before = title->font().pointSizeF();
+        appFont::apply(QString(), appFont::Size::Large);
+        QCoreApplication::processEvents();
+        QVERIFY(title->font().pointSizeF() > before);
+        appFont::apply(QString(), appFont::Size::Medium);
+        QCoreApplication::processEvents();
+        QCOMPARE(title->font().pointSizeF(), before);
+    }
+
+    void settingsDialogMnemonicLabelsHaveBuddies()
+    {
+        SettingsDialog dlg(AppSettings{}, false);
+        auto *fontLabel = dlg.findChild<QLabel *>("fontFamilyLabel");
+        auto *sizeLabel = dlg.findChild<QLabel *>("fontSizeLabel");
+        auto *font = dlg.findChild<QFontComboBox *>("fontFamily");
+        auto *size = dlg.findChild<QComboBox *>("fontSize");
+        QVERIFY(fontLabel);
+        QVERIFY(sizeLabel);
+        QVERIFY(font);
+        QVERIFY(size);
+        QCOMPARE(fontLabel->buddy(), static_cast<QWidget *>(font));
+        QCOMPARE(sizeLabel->buddy(), static_cast<QWidget *>(size));
+        QCOMPARE(font->currentIndex(), 0);
+        QCOMPARE(size->currentData().toString(), QString("medium"));
 
         for (auto *label : dlg.findChildren<QLabel *>()) {
             if (label->text().contains(QLatin1Char('&'))) {
