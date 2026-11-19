@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 0.4.2. This document describes what ztodo does and the rules it keeps.
+Version 0.5.0. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -35,7 +35,7 @@ Two static libraries, one executable, and tests:
 
 | Target | Directory | Depends on | Contents |
 |---|---|---|---|
-| `ztodo_core` | `core/` | Qt Core, Qt Network, libsodium | Everything that is not a widget: `Store`, `UndoStack`, `Views`, `QuickAdd`, `DateText`, `Recurrence`, `Reminders`, `Settings`, `Update`, `UpdateChecker`, `Minisign` |
+| `ztodo_core` | `core/` | Qt Core, Qt Network, libsodium | Everything that is not a widget: `Store`, `UndoStack`, `Views`, `Stats`, `QuickAdd`, `DateText`, `Recurrence`, `Reminders`, `Settings`, `Update`, `UpdateChecker`, `Minisign` |
 | `ztodo_ui` | `app/` | `ztodo_core`, Qt Widgets | `MainWindow` (+ `MainWindowNav.cpp` for the sidebar and project/label management), `TaskDialog`, `SettingsDialog`, `UpdateDialog`, `UpdateManager`, `Delegates`, `Theme` |
 | `ztodo` | `app/main.cpp` | `ztodo_ui` | Entry point |
 | `tst_*` | `tests/` | Qt Test | `tst_store`, `tst_parsing`, `tst_views`, `tst_reminders`, `tst_update`, `tst_ui` (offscreen) |
@@ -62,7 +62,7 @@ presents it and routes user actions to it.
 
 ## 3. Data model
 
-Three entity kinds, each identified by a random id (`newId()`: 20 hex
+Four entity kinds, each identified by a random id (`newId()`: 20 hex
 characters of a UUID). Ids and device ids are restricted to ASCII letters,
 digits, `-`, `_`, at most 64 characters (they appear in file names).
 
@@ -85,6 +85,13 @@ digits, `-`, `_`, at most 64 characters (they appear in file names).
 
 **Project:** `name`, `color` (`#rrggbb`, default `#4fc33a`), `order`, `deleted`.
 **Label:** `name`, `color` (default `#8a8f98`), `deleted`. Labels sort by name.
+**Completion** (0.5.0): `task` (task id), `project` (the task's project then),
+`at` (ISO 8601 UTC, the same instant as the `doneAt` written with it), `deleted`.
+One per completion, written in the same batch as the task change; never edited,
+only tombstoned when the completion is reopened or undone. Completing a
+recurring task only moves its date, so these records are the only full history
+(§7, Productivity). A record without `task` or a valid `at` is ignored.
+Versions before 0.5.0 reject lines of an unknown kind, so they skip these.
 
 A task that has no `title` field is treated as not existing. A project or label
 with an empty name is ignored.
@@ -209,6 +216,17 @@ date (and optional time), otherwise it is rejected. Empty clears the date.
 ## 7. Operations
 
 - **Complete / reopen** (Space). Recurring tasks move to their next date.
+  Completing writes a Completion record; reopening tombstones the task's latest
+  one. Undo restores both.
+- **Productivity** (View → Productivity, Ctrl+Shift+P; `Stats`). A non-modal
+  window, refreshed on every store change: completions today, this week (from
+  Monday), the last 7 and 30 days (with the daily average), the current day
+  streak (alive until today ends without a completion) and the longest, a
+  14-day bar chart, completions per project over 30 days, the best day, the
+  total, and open / overdue / due-today counts. Days are local calendar days.
+  Completions dated after today (a device clock running ahead) count only in
+  the total. History from before 0.5.0 comes from `doneAt`: each done task
+  once, and each recurring task's latest completion only.
 - **Add subtask**, **edit** (Enter / double-click), **delete** (Del; subtasks too),
   **move to project**, **set priority**, **reorder**.
 - **Projects and labels:** add, rename, recolor, delete. Deleting a project
@@ -222,7 +240,8 @@ date (and optional time), otherwise it is rejected. Empty clears the date.
 - **Batching.** Multi-entity actions (delete with subtasks, delete project,
   undo) emit one `changed()` signal so the window refreshes once.
 - **Keyboard:** Q or Ctrl+N quick add · Space complete · Enter edit · Del delete ·
-  Alt+↑/↓ reorder · Ctrl+Z undo · Ctrl+F search · Ctrl+1…4 views · F5 sync.
+  Alt+↑/↓ reorder · Ctrl+Z undo · Ctrl+F search · Ctrl+1…4 views ·
+  Ctrl+Shift+P productivity · F5 sync.
 
 ## 8. Reminders
 

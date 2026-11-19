@@ -7,6 +7,7 @@
 #include "Store.hpp"
 #include "DateText.hpp"
 #include "SettingsDialog.hpp"
+#include "StatsDialog.hpp"
 #include "TaskDialog.hpp"
 #include "version.hpp"
 
@@ -123,6 +124,46 @@ private slots:
         QCOMPARE(titles(w.taskList()), QStringList{"Buy milk"});
         w.undo(); // the add
         QVERIFY(store.tasks().isEmpty());
+    }
+
+    void productivityFollowsCompleteAndUndo()
+    {
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+        w.show();
+        const QString a = w.addFromText("Water plants every day");
+        const QString b = w.addFromText("Buy milk");
+
+        // Opened from the View menu.
+        QAction *act = w.findChild<QAction *>("productivityAction");
+        QVERIFY(act);
+        act->trigger();
+        StatsDialog *dlg = w.statsDialog();
+        QVERIFY(dlg && dlg->isVisible());
+        auto value = [dlg](const char *name) { return dlg->findChild<QLabel *>(name)->text(); };
+        QCOMPARE(value("statToday"), QStringLiteral("0"));
+        QCOMPARE(value("statStreak"), QStringLiteral("0"));
+
+        // Live: a recurring task counts every time, and undo takes it back.
+        w.toggleComplete(a);
+        w.toggleComplete(a);
+        w.toggleComplete(b);
+        QCOMPARE(value("statToday"), QStringLiteral("3"));
+        QCOMPARE(value("statStreak"), QStringLiteral("1"));
+        QCOMPARE(dlg->stats().daily.last(), 3);
+        w.undo();
+        QCOMPARE(value("statToday"), QStringLiteral("2"));
+        // Reopening a done task takes it out of the count.
+        w.toggleComplete(b); // done again: 3
+        QCOMPARE(value("statToday"), QStringLiteral("3"));
+        w.toggleComplete(b); // reopened
+        QCOMPARE(value("statToday"), QStringLiteral("2"));
+        QVERIFY(value("statProjects").contains("Inbox"));
+        // The same window is reused.
+        act->trigger();
+        QCOMPARE(w.statsDialog(), dlg);
     }
 
     void sidebarFilledOnOpen()

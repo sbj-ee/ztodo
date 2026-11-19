@@ -7,9 +7,9 @@ A [Todoist](https://todoist.com)-style to-do app for **Linux (amd64)** and
 folder on **Box**, so every Mac and Linux machine you use sees the same list,
 with no account or server besides Box.
 
-**0.4.2** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
-recurring tasks, natural-language quick add, search, undo, due-time reminders, light and dark themes, and
-signed in-app updates. The version is shown in the window title (`ztodo 0.4.2 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
+**0.5.0** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
+recurring tasks, natural-language quick add, search, undo, due-time reminders, productivity stats, light and dark themes, and
+signed in-app updates. The version is shown in the window title (`ztodo 0.5.0 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 Current release: **0.4.2**
 
@@ -32,7 +32,12 @@ Current release: **0.4.2**
   (coloured circle), project, labels and subtasks. Completing a recurring task
   moves it to its next date.
 - **Keyboard:** Q or Ctrl+N quick add · Space complete · Enter edit ·
-  Del delete · Alt+↑/↓ reorder · Ctrl+Z undo · Ctrl+1…4 views · F5 sync.
+  Del delete · Alt+↑/↓ reorder · Ctrl+Z undo · Ctrl+1…4 views · Ctrl+Shift+P productivity · F5 sync.
+- **Productivity** (View → Productivity, Ctrl+Shift+P): tasks completed today,
+  this week and in the last 30 days, your day streak and longest streak, a
+  14-day chart, completions by project, and how many tasks are open and overdue.
+  Every completion of a recurring task counts. It is worked out on your machine
+  from the synced folder, so every device shows the same history.
 - **Undo** for everything: complete, delete, edit, move, projects.
 - **Signed auto-update:** checks GitHub once a day (optional). On Linux it
   installs the new `.deb` with `pkexec apt`; on macOS it replaces `ztodo.app`

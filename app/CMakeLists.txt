@@ -7,6 +7,7 @@ add_library(ztodo_ui STATIC
   MainWindow.cpp MainWindowNav.cpp MainWindow.hpp
   TaskDialog.cpp TaskDialog.hpp
   SettingsDialog.cpp SettingsDialog.hpp
+  StatsDialog.cpp StatsDialog.hpp
   UpdateDialog.cpp UpdateDialog.hpp
   UpdateManager.cpp UpdateManager.hpp
 )

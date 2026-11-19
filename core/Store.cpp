@@ -21,6 +21,9 @@ namespace {
 const QString kTask = QStringLiteral("task");
 const QString kProject = QStringLiteral("project");
 const QString kLabel = QStringLiteral("label");
+// Older versions skip lines of a kind they don't know (validKind), so adding
+// one never breaks a device that hasn't updated yet.
+const QString kCompletion = QStringLiteral("completion");
 const QString kDeleted = QStringLiteral("deleted");
 
 // Timestamps above 2^53 are rejected: no real clock gets there (it is year
@@ -35,7 +38,7 @@ constexpr qint64 kMaxClockLeadMs = qint64(366) * 24 * 60 * 60 * 1000;
 
 bool validKind(const QString &k)
 {
-    return k == kTask || k == kProject || k == kLabel;
+    return k == kTask || k == kProject || k == kLabel || k == kCompletion;
 }
 
 // Device ids and entity ids: short, file-name safe.
@@ -444,28 +447,61 @@ QJsonObject Store::snapshot(const QString &kind, const QString &id, const QStrin
     return o;
 }
 
-QJsonObject Store::complete(const QString &taskId, const QDate &today)
+QJsonObject Store::complete(const QString &taskId, const QDate &today, QList<FieldRestore> *other)
 {
     Task t;
     if (!task(taskId, &t)) {
         return {};
     }
+    const QString now = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+    // A completion record with the same time as doneAt, so the stats can tell
+    // which doneAt values already have one (Stats.cpp, completionHistory()).
+    auto record = [&] {
+        const QString id = newId();
+        QJsonObject f;
+        f.insert(QStringLiteral("task"), taskId);
+        f.insert(QStringLiteral("project"), t.project);
+        f.insert(QStringLiteral("at"), now);
+        put(kCompletion, id, f);
+        if (other) {
+            *other << FieldRestore{kCompletion, id, {{kDeleted, true}}};
+        }
+    };
     const Recurrence r = Recurrence::parse(t.recur);
+    beginBatch();
+    QJsonObject before;
     if (r.valid && !t.done) {
-        const QJsonObject before = snapshot(kTask, taskId, {QStringLiteral("due"), QStringLiteral("doneAt")});
+        before = snapshot(kTask, taskId, {QStringLiteral("due"), QStringLiteral("doneAt")});
         Task moved = t;
         moved.dueDate = r.afterCompletion(t.dueDate, today);
         QJsonObject f;
         f.insert(QStringLiteral("due"), moved.dueString());
-        f.insert(QStringLiteral("doneAt"), QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
+        f.insert(QStringLiteral("doneAt"), now);
         put(kTask, taskId, f);
-        return before;
+        record();
+    } else {
+        before = snapshot(kTask, taskId, {QStringLiteral("done"), QStringLiteral("doneAt")});
+        QJsonObject f;
+        f.insert(QStringLiteral("done"), !t.done);
+        f.insert(QStringLiteral("doneAt"), t.done ? QString() : now);
+        put(kTask, taskId, f);
+        if (!t.done) {
+            record();
+        } else {
+            // Reopened: it no longer counts as done.
+            const QList<Completion> all = completions();
+            for (auto it = all.crbegin(); it != all.crend(); ++it) {
+                if (it->task == taskId) {
+                    put(kCompletion, it->id, {{kDeleted, true}});
+                    if (other) {
+                        *other << FieldRestore{kCompletion, it->id, {{kDeleted, false}}};
+                    }
+                    break;
+                }
+            }
+        }
     }
-    const QJsonObject before = snapshot(kTask, taskId, {QStringLiteral("done"), QStringLiteral("doneAt")});
-    QJsonObject f;
-    f.insert(QStringLiteral("done"), !t.done);
-    f.insert(QStringLiteral("doneAt"), t.done ? QString() : QDateTime::currentDateTimeUtc().toString(Qt::ISODate));
-    put(kTask, taskId, f);
+    endBatch();
     return before;
 }
 
@@ -540,16 +576,29 @@ void Store::ensureCache() const
     m_childCache.clear();
     m_projectCache.clear();
     m_labelCache.clear();
+    m_completionCache.clear();
     const QString tp = kTask + QLatin1Char(':');
     const QString pp = kProject + QLatin1Char(':');
     const QString lp = kLabel + QLatin1Char(':');
+    const QString cp = kCompletion + QLatin1Char(':');
     for (auto it = m_entities.cbegin(); it != m_entities.cend(); ++it) {
         const QString &k = it.key();
         const Entity &e = *it;
-        const QString kind = k.startsWith(tp) ? kTask : k.startsWith(pp) ? kProject : kLabel;
         if (e.deleted()) {
             continue;
         }
+        if (k.startsWith(cp)) {
+            Completion c;
+            c.id = k.mid(cp.size());
+            c.task = e.f.value(QStringLiteral("task")).v.toString();
+            c.project = e.f.value(QStringLiteral("project")).v.toString();
+            c.at = QDateTime::fromString(e.f.value(QStringLiteral("at")).v.toString(), Qt::ISODate);
+            if (!c.task.isEmpty() && c.at.isValid()) {
+                m_completionCache << c;
+            }
+            continue;
+        }
+        const QString kind = k.startsWith(tp) ? kTask : k.startsWith(pp) ? kProject : kLabel;
         if (kind == kTask) {
             if (e.f.contains(QStringLiteral("title"))) {
                 m_taskCache << toTask(k.mid(tp.size()), e);
@@ -595,6 +644,9 @@ void Store::ensureCache() const
         const int c = a.name.compare(b.name, Qt::CaseInsensitive);
         return c != 0 ? c < 0 : a.id < b.id;
     });
+    std::sort(m_completionCache.begin(), m_completionCache.end(), [](const Completion &a, const Completion &b) {
+        return a.at != b.at ? a.at < b.at : a.id < b.id;
+    });
     m_cacheRevision = m_revision;
 }
 
@@ -630,6 +682,12 @@ QList<Label> Store::labels() const
 {
     ensureCache();
     return m_labelCache;
+}
+
+QList<Completion> Store::completions() const
+{
+    ensureCache();
+    return m_completionCache;
 }
 
 QString Store::projectName(const QString &id) const

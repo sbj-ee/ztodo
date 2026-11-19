@@ -19,6 +19,7 @@ class QTimer;
 
 namespace ztodo {
 
+class StatsDialog;
 class TaskDelegate;
 
 // Sidebar (Inbox, Today, Upcoming, Completed, projects, labels) | header,
@@ -40,6 +41,8 @@ public:
     void undo();
     bool canUndo() const { return m_undo.canUndo(); }
     void runSyncCommand();
+    void showStats(); // View → Productivity (one non-modal window, live)
+    StatsDialog *statsDialog() const { return m_stats; }
     // "ztodo <version> — <view>" (just "ztodo <version>" without a view).
     static QString windowTitleFor(const QString &viewTitle);
 
@@ -96,6 +99,7 @@ private:
     QTimer *m_midnight;
     QTimer *m_remindTimer;
     QSystemTrayIcon *m_tray = nullptr;
+    StatsDialog *m_stats = nullptr;
     ReminderScheduler m_reminders;
     UndoStack m_undo;
     QDateTime m_lastSyncRun;

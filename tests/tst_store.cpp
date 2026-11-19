@@ -337,6 +337,81 @@ private slots:
         QCOMPARE(t.dueDate, QDate(2026, 11, 15));
     }
 
+    void completionRecords()
+    {
+        QTemporaryDir tmp;
+        Store s;
+        QVERIFY(s.open(tmp.path(), "me"));
+        const QString p = s.addProject("Work");
+        Task once = simple("once");
+        once.project = p;
+        const QString id = s.addTask(once);
+
+        QList<FieldRestore> undo;
+        const QJsonObject before = s.complete(id, QDate::currentDate(), &undo);
+        QCOMPARE(s.completions().size(), 1);
+        const Completion c = s.completions().first();
+        QCOMPARE(c.task, id);
+        QCOMPARE(c.project, p);
+        Task t;
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(c.at, t.doneAt); // same instant, so history doesn't count it twice
+        QCOMPARE(undo.size(), 1);
+
+        // Undo: the record goes with the completion.
+        s.beginBatch();
+        QVERIFY(s.setTaskFields(id, before));
+        QVERIFY(s.put(undo.first().kind, undo.first().id, undo.first().before));
+        s.endBatch();
+        QVERIFY(s.completions().isEmpty());
+
+        // Complete, then reopen: the reopen removes the record, and undoing
+        // the reopen brings it back.
+        s.complete(id);
+        QCOMPARE(s.completions().size(), 1);
+        undo.clear();
+        const QJsonObject reopenBefore = s.complete(id, QDate::currentDate(), &undo);
+        QVERIFY(s.completions().isEmpty());
+        QCOMPARE(undo.size(), 1);
+        QVERIFY(s.setTaskFields(id, reopenBefore));
+        QVERIFY(s.put(undo.first().kind, undo.first().id, undo.first().before));
+        QCOMPARE(s.completions().size(), 1);
+
+        // A recurring task gets one record per completion.
+        Task r = simple("Water plants");
+        r.dueDate = QDate(2026, 11, 12);
+        r.recur = "every day";
+        const QString rid = s.addTask(r);
+        s.complete(rid, QDate(2026, 11, 12));
+        s.complete(rid, QDate(2026, 11, 13));
+        int n = 0;
+        for (const Completion &x : s.completions()) {
+            n += x.task == rid ? 1 : 0;
+        }
+        QCOMPARE(n, 2);
+
+        // Records sync like everything else, and survive compaction.
+        Store other;
+        QVERIFY(other.open(tmp.path(), "other"));
+        QCOMPARE(other.completions().size(), 3);
+        s.compactOwnLog();
+        Store again;
+        QVERIFY(again.open(tmp.path(), "again"));
+        QCOMPARE(again.completions().size(), 3);
+        // Not tasks, projects or labels.
+        QCOMPARE(again.tasks().size(), 2);
+        QCOMPARE(again.labels().size(), 0);
+    }
+
+    void unknownKindsAreSkipped()
+    {
+        // What a 0.4.x device does with a completion line is what this
+        // version does with any kind it doesn't know: skip the line.
+        Op op;
+        QVERIFY(!Op::fromJsonLine(R"({"ts":1,"dev":"d","k":"widget","id":"x","f":{}})", &op));
+        QVERIFY(Op::fromJsonLine(R"({"ts":1,"dev":"d","k":"completion","id":"x","f":{}})", &op));
+    }
+
     void findByName()
     {
         QTemporaryDir tmp;

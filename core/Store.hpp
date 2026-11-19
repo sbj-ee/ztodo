@@ -63,6 +63,25 @@ struct Task {
     QString dueString() const; // "2026-11-12" or "2026-11-12T17:00"
 };
 
+// One completion of a task (kind "completion"), written alongside the task's
+// done/doneAt change. Completing a recurring task only moves its date, so
+// these records are the only full history of what was done when; the
+// productivity stats (Stats.hpp) count them. Never edited, only tombstoned
+// when the completion is reopened or undone.
+struct Completion {
+    QString id;
+    QString task;    // task id
+    QString project; // the task's project at the time (empty = Inbox)
+    QDateTime at;    // UTC; equals the task's doneAt written with it
+};
+
+// "Put these old field values back" for one entity (undo).
+struct FieldRestore {
+    QString kind;
+    QString id;
+    QJsonObject before;
+};
+
 struct Project {
     QString id;
     QString name;
@@ -108,7 +127,11 @@ public:
     bool setTaskFields(const QString &id, const QJsonObject &fields) { return put(QStringLiteral("task"), id, fields); }
     // Completes a task: a recurring one moves to its next date instead.
     // Returns the fields that were changed with their previous values (undo).
-    QJsonObject complete(const QString &taskId, const QDate &today = QDate::currentDate());
+    // Completing also writes a Completion record; reopening tombstones the
+    // task's latest one. `other` (optional) receives the undo entries for
+    // those records.
+    QJsonObject complete(const QString &taskId, const QDate &today = QDate::currentDate(),
+                         QList<FieldRestore> *other = nullptr);
     bool remove(const QString &kind, const QString &id); // tombstone (deleted: true); a task's subtasks too
 
     // Group several writes into one changed() signal (nestable).
@@ -123,6 +146,7 @@ public:
     QList<Task> children(const QString &parentId) const; // direct subtasks, by order
     QList<Project> projects() const; // by order
     QList<Label> labels() const;     // by name
+    QList<Completion> completions() const; // by time, oldest first
     bool task(const QString &id, Task *out) const;
     QString projectName(const QString &id) const;
     QString labelName(const QString &id) const;
@@ -194,6 +218,7 @@ private:
     mutable QHash<QString, QList<Task>> m_childCache;
     mutable QList<Project> m_projectCache;
     mutable QList<Label> m_labelCache;
+    mutable QList<Completion> m_completionCache;
     QHash<QString, double> m_maxOrder; // per kind, deleted entities included; kept by applyOp()
 };
 

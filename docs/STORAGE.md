@@ -27,7 +27,7 @@ stored in `~/.config/ztodo/device-id`. It appends one JSON object per line to
 |---|---|
 | `ts` | Hybrid clock in ms: `max(wall clock, highest ts seen + 1)`, so a device with a slow clock still overrides what it has already seen. At most 2^53; a line with a larger `ts` is skipped. Only timestamps up to a year ahead of the device's wall clock count as "seen", so one far-future line can't push every clock to the end of the range |
 | `dev` | Writer's device id |
-| `k` | `task`, `project` or `label` |
+| `k` | `task`, `project`, `label` or `completion` |
 | `id` | Entity id |
 | `f` | Fields set by this change |
 
@@ -40,6 +40,11 @@ stored in `~/.config/ztodo/device-id`. It appends one JSON object per line to
   `deleted`
 - **project:** `name`, `color`, `order`, `deleted`
 - **label:** `name`, `color`, `deleted`
+- **completion** (0.5.0): `task` (task id), `project`, `at` (ISO 8601 UTC),
+  `deleted`. One per completed task or completed occurrence of a recurring
+  task, for the productivity stats; tombstoned when the completion is reopened
+  or undone. Readers skip lines whose kind they don't know, so older versions
+  ignore these and the format version stays 1.
 
 ## Merging
 

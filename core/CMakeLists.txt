@@ -5,6 +5,7 @@ add_library(ztodo_core STATIC
   Store.cpp Store.hpp
   UndoStack.cpp UndoStack.hpp
   Views.cpp Views.hpp
+  Stats.cpp Stats.hpp
   DateText.cpp DateText.hpp
   Recurrence.cpp Recurrence.hpp
   Reminders.cpp Reminders.hpp

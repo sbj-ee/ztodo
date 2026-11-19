@@ -7,6 +7,7 @@
 #include "QuickAdd.hpp"
 #include "Recurrence.hpp"
 #include "SettingsDialog.hpp"
+#include "StatsDialog.hpp"
 #include "TaskDialog.hpp"
 #include "Theme.hpp"
 #include "UpdateManager.hpp"
@@ -294,6 +295,10 @@ void MainWindow::buildMenus()
         });
         a->setShortcut(QKeySequence(QString::fromLatin1(it.key)));
     }
+    viewMenu->addSeparator();
+    QAction *stats = viewMenu->addAction(QStringLiteral("&Productivity…"), this, &MainWindow::showStats);
+    stats->setObjectName(QStringLiteral("productivityAction"));
+    stats->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+P")));
 
     QMenu *settings = menuBar()->addMenu(QStringLiteral("&Settings"));
     settings->setObjectName(QStringLiteral("settingsMenu"));
@@ -341,7 +346,7 @@ void MainWindow::buildMenus()
                 "</table>"
                 "<p>Keys: <b>Q</b> or Ctrl+N quick add · <b>Space</b> complete · <b>Enter</b> edit · "
                 "<b>Del</b> delete · <b>Alt+↑/↓</b> reorder · <b>Ctrl+Z</b> undo · "
-                "<b>Ctrl+1…4</b> views · <b>F5</b> sync</p>"));
+                "<b>Ctrl+1…4</b> views · <b>Ctrl+Shift+P</b> productivity · <b>F5</b> sync</p>"));
     });
     QAction *upd = help->addAction(QStringLiteral("Check for &Updates…"), this,
                                    [this] { UpdateManager::instance().checkNow(this); });
@@ -556,7 +561,8 @@ void MainWindow::toggleComplete(const QString &taskId)
     if (!m_store->task(taskId, &t)) {
         return;
     }
-    const QJsonObject before = m_store->complete(taskId);
+    QList<FieldRestore> records;
+    const QJsonObject before = m_store->complete(taskId, QDate::currentDate(), &records);
     if (before.isEmpty()) {
         return;
     }
@@ -570,8 +576,11 @@ void MainWindow::toggleComplete(const QString &taskId)
         msg = after.done ? QStringLiteral("Completed %1").arg(quoted(t.title))
                          : QStringLiteral("Reopened %1").arg(quoted(t.title));
     }
-    pushUndo(after.done || !t.recur.isEmpty() ? QStringLiteral("Complete") : QStringLiteral("Reopen"),
-             {Change{kTask, taskId, before}});
+    QList<Change> changes{Change{kTask, taskId, before}};
+    for (const FieldRestore &r : std::as_const(records)) {
+        changes << Change{r.kind, r.id, r.before};
+    }
+    pushUndo(after.done || !t.recur.isEmpty() ? QStringLiteral("Complete") : QStringLiteral("Reopen"), changes);
     notify(msg, true);
     scheduleSync();
 }
@@ -983,6 +992,16 @@ void MainWindow::checkReminders()
     // Also in the window, for systems without a notification service.
     notify(QStringLiteral("%1: %2").arg(title, lines.join(QStringLiteral("; "))), false);
     QApplication::alert(this);
+}
+
+void MainWindow::showStats()
+{
+    if (!m_stats) {
+        m_stats = new StatsDialog(m_store, this);
+    }
+    m_stats->show();
+    m_stats->raise();
+    m_stats->activateWindow();
 }
 
 void MainWindow::openPreferences()

@@ -6,6 +6,13 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 0.5.0 — Unreleased
+
+### Added
+- **Productivity stats** (View → Productivity, Ctrl+Shift+P): completed today, this week and in the last 30 days, the current and longest day streak, a 14-day chart, completions by project, the best day, and open/overdue counts. The window updates live, including changes synced from other devices. It is all worked out locally from the data folder.
+- Every completion is now recorded as a `completion` entry in the device log (docs/STORAGE.md), so each completion of a recurring task counts, not just the latest. Reopening or undoing a completion removes its entry. Devices still on 0.4.x skip these lines and are otherwise unaffected. History from before this version comes from each task's completion time, so a recurring task contributes only its most recent earlier completion.
+- `tests/tst_stats`, plus Store and UI tests for completion entries.
+
 ## 0.4.2 — 2026-11-19
 
 ### Fixed
