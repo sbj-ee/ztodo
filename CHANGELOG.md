@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 1.0.2 — unreleased
+## 1.0.2 — 2026-11-25
 
 ### Fixed
 - **Dialogs were hard to see over the main window.** Every dialog (Help → Check for Updates, Preferences, Edit Task, confirmations) had exactly the window's background colour, so on desktops that draw no strong frame or shadow it blended into the window behind it. Dialogs now have a surface of their own: a lighter grey in dark mode, a slightly darker grey in light mode, with buttons kept distinct from it. It follows theme changes, including while a dialog is open. The native macOS style is left as it is.
