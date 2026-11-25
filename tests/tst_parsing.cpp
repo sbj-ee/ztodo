@@ -161,6 +161,41 @@ private slots:
         QCOMPARE(bang.afterCompletion(kToday.addDays(-10), kToday), kToday.addDays(3));
     }
 
+    // A monthly task on the 31st is cut short in short months but goes back
+    // to the 31st afterwards; a yearly Feb 29 task returns in leap years.
+    void monthEndDoesNotDrift()
+    {
+        const Recurrence monthly = Recurrence::parse("every month");
+        QCOMPARE(monthly.next(QDate(2027, 1, 31)), QDate(2027, 2, 28));
+        QCOMPARE(monthly.next(QDate(2027, 2, 28), 31), QDate(2027, 3, 31));
+        QCOMPARE(monthly.next(QDate(2027, 3, 31), 31), QDate(2027, 4, 30));
+        QCOMPARE(monthly.next(QDate(2027, 4, 30), 31), QDate(2027, 5, 31));
+        QCOMPARE(monthly.next(QDate(2027, 2, 28), 30), QDate(2027, 3, 30));
+        // Without an anchor, the old behaviour: the base's own day.
+        QCOMPARE(monthly.next(QDate(2027, 2, 28)), QDate(2027, 3, 28));
+        // A stale anchor (the date was moved off the month end) is ignored.
+        QCOMPARE(monthly.next(QDate(2027, 2, 15), 31), QDate(2027, 3, 15));
+        QCOMPARE(Recurrence::anchorFor(QDate(2027, 2, 15), 31), 15);
+        QCOMPARE(Recurrence::anchorFor(QDate(2027, 2, 28), 31), 31);
+        QCOMPARE(Recurrence::anchorFor(QDate(2027, 3, 31), 30), 31);
+        QCOMPARE(Recurrence::anchorFor(QDate(2027, 2, 28), 99), 28);
+
+        const Recurrence quarterly = Recurrence::parse("every 3 months");
+        QCOMPARE(quarterly.next(QDate(2027, 2, 28), 31), QDate(2027, 5, 31));
+
+        const Recurrence yearly = Recurrence::parse("every year");
+        QCOMPARE(yearly.next(QDate(2028, 2, 29)), QDate(2029, 2, 28));
+        QCOMPARE(yearly.next(QDate(2029, 2, 28), 29), QDate(2030, 2, 28));
+        QCOMPARE(yearly.next(QDate(2031, 2, 28), 29), QDate(2032, 2, 29));
+
+        // Skipping missed occurrences keeps the anchor throughout.
+        QCOMPARE(monthly.afterCompletion(QDate(2027, 1, 31), QDate(2027, 3, 5)), QDate(2027, 3, 31));
+        QCOMPARE(monthly.afterCompletion(QDate(2027, 2, 28), QDate(2027, 2, 28), 31), QDate(2027, 3, 31));
+        // every! counts from today; the anchor plays no part.
+        QCOMPARE(Recurrence::parse("every! month").afterCompletion(QDate(2027, 1, 31), QDate(2027, 2, 10), 31),
+                 QDate(2027, 3, 10));
+    }
+
     void firstOccurrence()
     {
         QCOMPARE(Recurrence::parse("every day").first(kToday), kToday);

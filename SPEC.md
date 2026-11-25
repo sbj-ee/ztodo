@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 1.0.0. This document describes what ztodo does and the rules it keeps.
+Version 1.0.1. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -78,6 +78,7 @@ digits, `-`, `_`, at most 64 characters (they appear in file names).
 | `priority` | 1..4 | 1 = highest (red), 4 = none. Out-of-range values are clamped |
 | `due` | string | `YYYY-MM-DD` (all day) or `YYYY-MM-DDTHH:mm` (local time); empty = no date |
 | `recur` | string | Recurrence rule text (§6); empty = once |
+| `anchor` | 1..31 | (1.0.1) Day of the month the task repeats on; written with every `due` change. 0 or missing = the due date's own day |
 | `done`, `doneAt` | bool, ISO 8601 UTC | |
 | `created` | ISO 8601 UTC | |
 | `order` | number | Manual order; sorts ascending, ties broken by id |
@@ -210,6 +211,17 @@ a title.
 `every!` counts from the completion date instead of the due date
 (`every! 3 days`). Completing a recurring task does not mark it done: it moves
 to its next date (always after today) and records `doneAt`.
+
+Month and year rules keep the day of the month. A day the month doesn't have
+becomes its last day, and the next occurrence goes back to the original day:
+a monthly task on Jan 31 moves to Feb 28, then Mar 31, Apr 30, May 31; a
+yearly task on Feb 29 falls on Feb 28 and returns to Feb 29 in leap years.
+The original day is the task's `anchor`: setting the date by hand (add, edit,
+reschedule) sets it to that date's day, and completing carries it over. It
+counts only while the due date is the last day of its month and the anchor is
+later, so a date changed by a version without anchors (before 1.0.1) is never
+pulled to another day. `every 15th` already names its day; `every!` counts
+from the completion date and has no anchor.
 
 ### Task editor
 

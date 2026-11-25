@@ -68,6 +68,16 @@ ZTODO_FUZZ_TARGET(const uint8_t *data, size_t size)
             if (!a.isValid() || a <= base) {
                 fail("Recurrence::afterCompletion is not after today", text);
             }
+            for (int anchor : {29, 30, 31, 99}) {
+                const QDate na = r.next(base, anchor);
+                if (!na.isValid() || na <= base) {
+                    fail("Recurrence::next with an anchor is not after its base", text);
+                }
+                const QDate aa = r.afterCompletion(base.addDays(-3), base, anchor);
+                if (!aa.isValid() || aa <= base) {
+                    fail("Recurrence::afterCompletion with an anchor is not after today", text);
+                }
+            }
         }
     }
     return 0;

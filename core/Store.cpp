@@ -25,6 +25,10 @@ const QString kLabel = QStringLiteral("label");
 // one never breaks a device that hasn't updated yet.
 const QString kCompletion = QStringLiteral("completion");
 const QString kDeleted = QStringLiteral("deleted");
+const QString kDue = QStringLiteral("due");
+// Day of the month a recurring task really falls on (Recurrence::anchorFor).
+// Written with every change of "due"; older versions ignore it.
+const QString kAnchor = QStringLiteral("anchor");
 
 // Timestamps above 2^53 are rejected: no real clock gets there (it is year
 // ~287,000 in ms), it is the largest integer a JSON number holds exactly, and
@@ -359,34 +363,48 @@ bool Store::put(const QString &kind, const QString &id, const QJsonObject &field
     if (m_dir.isEmpty() || !validKind(kind) || !validId(id) || fields.isEmpty()) {
         return false;
     }
+    QJsonObject withAnchor;
+    const QJsonObject *f = &fields;
+    if (kind == kTask && fields.contains(kDue) && !fields.contains(kAnchor)) {
+        // A date set by hand (add, edit, reschedule, undo of an edit) is the
+        // day the task repeats on from now. Only complete() carries an older
+        // anchor over, writing it explicitly.
+        QDate d;
+        QTime t;
+        parseDueInto(fields.value(kDue).toString(), &d, &t);
+        withAnchor = fields;
+        withAnchor.insert(kAnchor, d.isValid() ? d.day() : 0);
+        f = &withAnchor;
+    }
     Op op;
     op.ts = tick();
     op.device = m_device;
     op.kind = kind;
     op.id = id;
-    op.fields = fields;
-    QFile f(ownLogPath());
-    if (!f.open(QIODevice::ReadWrite | QIODevice::Append)) {
-        emit error(QStringLiteral("Couldn't write %1: %2").arg(f.fileName(), f.errorString()));
+    op.fields = *f;
+    QFile file(ownLogPath());
+    if (!file.open(QIODevice::ReadWrite | QIODevice::Append)) {
+        emit error(QStringLiteral("Couldn't write %1: %2").arg(file.fileName(), file.errorString()));
         return false;
     }
     // A torn last line (crash mid-write) would swallow this op; end it first.
-    if (f.size() > 0) {
-        f.seek(f.size() - 1);
+    if (file.size() > 0) {
+        file.seek(file.size() - 1);
         char last = '\n';
-        f.getChar(&last);
+        file.getChar(&last);
         if (last != '\n') {
-            f.write("\n");
+            file.write("\n");
         }
     }
     const QByteArray line = op.toJsonLine();
-    if (f.write(line) != line.size() || !f.flush()) {
-        emit error(QStringLiteral("Couldn't write %1: %2").arg(f.fileName(), f.errorString()));
+    if (file.write(line) != line.size() || !file.flush()) {
+        emit error(QStringLiteral("Couldn't write %1: %2").arg(file.fileName(), file.errorString()));
         return false;
     }
-    f.close();
+    file.close();
     applyOp(op);
-    m_stamps.insert(QFileInfo(f.fileName()).filePath(), stampFor(f.fileName(), QFileInfo(f.fileName()).size()));
+    m_stamps.insert(QFileInfo(file.fileName()).filePath(),
+                    stampFor(file.fileName(), QFileInfo(file.fileName()).size()));
     ++m_revision;
     if (m_batch > 0) {
         m_batchDirty = true;
@@ -471,11 +489,14 @@ QJsonObject Store::complete(const QString &taskId, const QDate &today, QList<Fie
     beginBatch();
     QJsonObject before;
     if (r.valid && !t.done) {
-        before = snapshot(kTask, taskId, {QStringLiteral("due"), QStringLiteral("doneAt")});
+        before = snapshot(kTask, taskId, {kDue, kAnchor, QStringLiteral("doneAt")});
+        const Entity *e = entity(kTask, taskId);
+        const int anchor = Recurrence::anchorFor(t.dueDate, e ? e->f.value(kAnchor).v.toInt() : 0);
         Task moved = t;
-        moved.dueDate = r.afterCompletion(t.dueDate, today);
+        moved.dueDate = r.afterCompletion(t.dueDate, today, anchor);
         QJsonObject f;
-        f.insert(QStringLiteral("due"), moved.dueString());
+        f.insert(kDue, moved.dueString());
+        f.insert(kAnchor, anchor);
         f.insert(QStringLiteral("doneAt"), now);
         put(kTask, taskId, f);
         record();

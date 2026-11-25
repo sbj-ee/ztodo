@@ -369,6 +369,43 @@ private slots:
         QCOMPARE(t.dueDate, QDate(2026, 11, 15));
     }
 
+    // A monthly task on the 31st goes back to the 31st after a short month,
+    // undo puts the anchor back, and setting the date by hand resets it.
+    void completeMonthlyKeepsDayOfMonth()
+    {
+        QTemporaryDir tmp;
+        Store s;
+        QVERIFY(s.open(tmp.path(), "me"));
+        Task t = simple("Pay card");
+        t.dueDate = QDate(2027, 1, 31);
+        t.recur = "every month";
+        const QString id = s.addTask(t);
+        s.complete(id, QDate(2027, 1, 31));
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.dueDate, QDate(2027, 2, 28));
+        const QJsonObject before = s.complete(id, QDate(2027, 2, 28));
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.dueDate, QDate(2027, 3, 31));
+        QVERIFY(s.put("task", id, before)); // undo
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.dueDate, QDate(2027, 2, 28));
+        s.complete(id, QDate(2027, 2, 28));
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.dueDate, QDate(2027, 3, 31));
+
+        // Moved to Apr 30 by hand: it now repeats on the 30th.
+        QVERIFY(s.setTaskFields(id, {{"due", "2027-04-30"}}));
+        s.complete(id, QDate(2027, 4, 30));
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.dueDate, QDate(2027, 5, 30));
+
+        // A log from before 1.0.1 (no anchor) still works: the date's own day.
+        QVERIFY(s.put("task", id, {{"due", "2027-06-28"}, {"anchor", QJsonValue()}}));
+        s.complete(id, QDate(2027, 6, 28));
+        QVERIFY(s.task(id, &t));
+        QCOMPARE(t.dueDate, QDate(2027, 7, 28));
+    }
+
     void completionRecords()
     {
         QTemporaryDir tmp;

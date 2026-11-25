@@ -380,7 +380,13 @@ private slots:
                     const QList<QByteArray> written = f.readAll().trimmed().split('\n');
                     Op op;
                     QVERIFY(Op::fromJsonLine(written.last(), &op));
-                    QCOMPARE(op.fields, shape.fields);
+                    // put() adds the anchor day to a task's due change.
+                    QJsonObject expected = shape.fields;
+                    if (shape.kind == "task" && expected.contains("due")) {
+                        const QDate due = QDate::fromString(expected.value("due").toString().left(10), Qt::ISODate);
+                        expected.insert("anchor", due.isValid() ? due.day() : 0);
+                    }
+                    QCOMPARE(op.fields, expected);
                     oracle.add(op);
                 } else if (action < 16) {
                     s.reload();

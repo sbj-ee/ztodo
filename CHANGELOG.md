@@ -6,6 +6,14 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 1.0.1 — unreleased
+
+### Fixed
+- **Monthly tasks drifted to the 28th.** A task repeating `every month` from the 31st moved to Feb 28 and then stayed on the 28th for good (Mar 28, Apr 28, …); the 29th and 30th drifted the same way, as did a yearly task on Feb 29. Each task now remembers the day it repeats on (a new `anchor` field in the log, written with every date change), so it goes Jan 31 → Feb 28 → Mar 31 → Apr 30 → May 31, and Feb 29 returns in leap years. Setting a date by hand makes that day the new one. Tasks already on the 28th after drifting stay there until you set their date once. Devices still on 1.0.0 ignore the new field and keep the old behaviour; a date they change is never pulled to another day.
+
+### Added
+- Recurrence and Store tests for month-end and leap-day dates, and fuzz checks with an anchor day.
+
 ## 1.0.0 — 2026-11-25
 
 The first stable release. The data folder format is unchanged (`ztodo.json` version 1), so 0.x devices on the same folder keep working alongside it.

@@ -25,13 +25,23 @@ struct Recurrence {
     int monthDay = 0;    // Unit::Month: fixed day of month (0 = same day as base)
 
     static Recurrence parse(const QString &text);
-    // The next occurrence strictly after `base`.
-    QDate next(const QDate &base) const;
+    // The next occurrence strictly after `base`. For month and year rules
+    // (other than "every 15th"), `anchorDay` is the day of the month the task
+    // really falls on: a task on the 31st moved to Feb 28 goes back to the
+    // 31st (Mar 31), instead of staying on the 28th. 0 = base's own day.
+    QDate next(const QDate &base, int anchorDay = 0) const;
     // First occurrence on or after `today` (a new recurring task with no date).
     QDate first(const QDate &today) const;
     // Where a completed task moves: after its due date (or after today for
-    // "every!"), and always after today.
-    QDate afterCompletion(const QDate &due, const QDate &today) const;
+    // "every!"), and always after today. `anchorDay` as for next().
+    QDate afterCompletion(const QDate &due, const QDate &today, int anchorDay = 0) const;
+
+    // The day of the month a task due on `due` repeats on, given the anchor
+    // stored with it. The anchor counts only when `due` is the last day of
+    // its month and the anchor is later (the date was cut short by a short
+    // month); otherwise it is `due`'s own day, so a stale anchor (the date was
+    // changed by a version that doesn't keep one) can't pull it elsewhere.
+    static int anchorFor(const QDate &due, int anchorDay);
 };
 
 // The regex matching a recurrence phrase inside free text (quick add).

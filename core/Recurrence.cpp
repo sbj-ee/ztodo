@@ -126,7 +126,18 @@ QDate dayInMonth(int year, int month, int day)
 }
 } // namespace
 
-QDate Recurrence::next(const QDate &base) const
+int Recurrence::anchorFor(const QDate &due, int anchorDay)
+{
+    if (!due.isValid()) {
+        return 0;
+    }
+    if (anchorDay > due.day() && anchorDay <= 31 && due.day() == due.daysInMonth()) {
+        return anchorDay;
+    }
+    return due.day();
+}
+
+QDate Recurrence::next(const QDate &base, int anchorDay) const
 {
     if (!valid || !base.isValid()) {
         return {};
@@ -145,10 +156,13 @@ QDate Recurrence::next(const QDate &base) const
             }
             return d;
         }
-        return base.addMonths(interval);
+        const QDate d = base.addMonths(interval);
+        return dayInMonth(d.year(), d.month(), anchorFor(base, anchorDay));
     }
-    case Unit::Year:
-        return base.addYears(interval);
+    case Unit::Year: {
+        const QDate d = base.addYears(interval);
+        return dayInMonth(d.year(), d.month(), anchorFor(base, anchorDay));
+    }
     case Unit::Weekdays:
         for (int i = 1; i <= 7; ++i) {
             const QDate d = base.addDays(i);
@@ -175,16 +189,19 @@ QDate Recurrence::first(const QDate &today) const
     return today;
 }
 
-QDate Recurrence::afterCompletion(const QDate &due, const QDate &today) const
+QDate Recurrence::afterCompletion(const QDate &due, const QDate &today, int anchorDay) const
 {
     if (!valid) {
         return {};
     }
-    QDate d = next(fromCompletion || !due.isValid() ? today : due);
+    const bool fromToday = fromCompletion || !due.isValid();
+    // Every step keeps the same day of the month, even through a short month.
+    const int anchor = fromToday ? 0 : anchorFor(due, anchorDay);
+    QDate d = next(fromToday ? today : due, anchor);
     // Skip occurrences that are already in the past (an overdue daily task
     // moves to tomorrow, not to the day after it was due).
     for (int guard = 0; d.isValid() && d <= today && guard < 10000; ++guard) {
-        d = next(d);
+        d = next(d, anchor);
     }
     return d;
 }

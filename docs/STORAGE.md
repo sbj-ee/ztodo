@@ -36,8 +36,9 @@ stored in `~/.config/ztodo/device-id`. It appends one JSON object per line to
 - **task:** `title`, `notes`, `project` (id, empty = Inbox), `parent` (task id,
   for subtasks), `labels` (array of label ids), `priority` (1 highest … 4 none),
   `due` (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm`, local time), `recur` (rule text,
-  e.g. `every 2 weeks`), `done`, `doneAt`, `created` (ISO 8601 UTC), `order`,
-  `deleted`
+  e.g. `every 2 weeks`), `anchor` (1.0.1: day of the month a monthly or yearly
+  task repeats on, written with every `due` change; older versions ignore it),
+  `done`, `doneAt`, `created` (ISO 8601 UTC), `order`, `deleted`
 - **project:** `name`, `color`, `order`, `deleted`
 - **label:** `name`, `color`, `deleted`
 - **completion** (0.5.0): `task` (task id), `project`, `at` (ISO 8601 UTC),
