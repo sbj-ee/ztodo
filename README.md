@@ -11,7 +11,7 @@ with no account or server besides Box.
 recurring tasks, natural-language quick add, search, undo, due-time reminders, productivity stats, light and dark themes, and
 signed in-app updates. The version is shown in the window title (`ztodo 1.0.1 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
-Current release: **1.0.0**
+Current release: **1.0.1**
 
 ## Features
 
