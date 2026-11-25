@@ -306,6 +306,38 @@ private slots:
         QCOMPARE(s.tasks().size(), 0);
     }
 
+    // Device A deletes a project while device B, offline, files a new task
+    // under it. After merging, the task must not vanish from every list: it
+    // reads as an Inbox task, and goes back to the project if that is restored.
+    void taskInDeletedProjectFallsBackToInbox()
+    {
+        QTemporaryDir tmp;
+        Store a;
+        Store b;
+        QVERIFY(a.open(tmp.path(), "dev-a"));
+        QVERIFY(b.open(tmp.path(), "dev-b"));
+        const QString pid = a.addProject("Work");
+        QVERIFY(b.reload());
+        QVERIFY(a.remove("project", pid));
+        Task t = simple("filed offline");
+        t.project = pid;
+        const QString id = b.addTask(t); // b has not seen the delete yet
+        QVERIFY(a.reload());
+        QVERIFY(b.reload());
+        for (Store *s : {&a, &b}) {
+            Task got;
+            QVERIFY(s->task(id, &got));
+            QCOMPARE(got.project, QString());
+            QCOMPARE(s->tasks().size(), 1);
+            QCOMPARE(s->tasks().first().project, QString());
+        }
+        QVERIFY(a.put("project", pid, {{"deleted", false}}));
+        Task got;
+        QVERIFY(a.task(id, &got));
+        QCOMPARE(got.project, pid);
+        QCOMPARE(a.tasks().first().project, pid);
+    }
+
     void completeAndUndo()
     {
         QTemporaryDir tmp;

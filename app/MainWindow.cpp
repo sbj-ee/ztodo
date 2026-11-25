@@ -568,8 +568,11 @@ void MainWindow::toggleComplete(const QString &taskId)
     }
     Task after;
     m_store->task(taskId, &after);
+    // The same test Store::complete() uses: only an open task with a rule it
+    // understands moves to its next date; anything else is done or reopened.
+    const bool movedOn = !t.done && Recurrence::parse(t.recur).valid;
     QString msg;
-    if (!t.recur.isEmpty() && !t.done) {
+    if (movedOn) {
         msg = QStringLiteral("Completed %1 — next: %2")
                   .arg(quoted(t.title), formatDue(after.dueDate, after.dueTime, QDate::currentDate()));
     } else {
@@ -580,7 +583,7 @@ void MainWindow::toggleComplete(const QString &taskId)
     for (const FieldRestore &r : std::as_const(records)) {
         changes << Change{r.kind, r.id, r.before};
     }
-    pushUndo(after.done || !t.recur.isEmpty() ? QStringLiteral("Complete") : QStringLiteral("Reopen"), changes);
+    pushUndo(after.done || movedOn ? QStringLiteral("Complete") : QStringLiteral("Reopen"), changes);
     notify(msg, true);
     scheduleSync();
 }

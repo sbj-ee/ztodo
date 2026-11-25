@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 0.5.0. This document describes what ztodo does and the rules it keeps.
+Version 1.0.0. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -126,7 +126,10 @@ The full format is in [docs/STORAGE.md](docs/STORAGE.md). The rules that matter:
    a torn last line of its own log with a newline so the new op is not lost.
 7. **Deletes are tombstones** (`deleted: true`). Deleting a task also deletes
    all of its subtasks (at any depth). A tombstone is an ordinary change, so it
-   syncs and can be undone.
+   syncs and can be undone. A task whose project is missing or deleted (one
+   device deleted the project while another, offline, filed a task under it)
+   reads as an Inbox task; its `project` field is left as written, so it goes
+   back to the project if the project is restored.
 8. **Format version.** A data folder whose marker says version greater than 1
    is refused with "written by a newer ztodo".
 9. **Compaction.** At startup, when this device's log exceeds 256 KB, it is

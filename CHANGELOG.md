@@ -6,6 +6,17 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## 1.0.0 — unreleased
+
+The first stable release. The data folder format is unchanged (`ztodo.json` version 1), so 0.x devices on the same folder keep working alongside it.
+
+### Fixed
+- **A task could disappear from every list after a sync.** If one device deleted a project while another, offline, added or moved a task into it, the merged task pointed at a project that no longer existed: it showed in no project and not in the Inbox (only in Today, Upcoming or search, if at all), with a blank project name. Such a task now reads as an Inbox task on every device. Nothing is rewritten, so undoing the project's deletion puts the task back in it.
+- Reopening a completed task that has a repeat rule was offered as "Undo Complete" instead of "Undo Reopen". The window now uses the same test as completing does: only an open task with a repeat rule ztodo understands moves to its next date.
+
+### Added
+- A Store test for the deleted-project case above.
+
 ## 0.5.0 — 2026-11-19
 
 ### Added

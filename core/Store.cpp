@@ -553,6 +553,15 @@ Task Store::toTask(const QString &id, const Entity &e) const
     t.title = v("title").toString();
     t.notes = v("notes").toString();
     t.project = v("project").toString();
+    if (!t.project.isEmpty()) {
+        // A project deleted on one device while another filed a task under it
+        // (offline) would leave the task in no list: read it as an Inbox task.
+        // Only the read changes, so restoring the project brings it back.
+        const Entity *p = entity(kProject, t.project);
+        if (!p || p->deleted() || p->f.value(QStringLiteral("name")).v.toString().isEmpty()) {
+            t.project.clear();
+        }
+    }
     t.parent = v("parent").toString();
     for (const QJsonValue &l : v("labels").toArray()) {
         t.labels << l.toString();
