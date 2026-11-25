@@ -6,7 +6,7 @@ All notable changes to ztodo. The version is the single
 are tagged `vX.Y.Z`, built and published by `.github/workflows/release.yml`,
 and signed with minisign (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## 1.0.0 — unreleased
+## 1.0.0 — 2026-11-25
 
 The first stable release. The data folder format is unchanged (`ztodo.json` version 1), so 0.x devices on the same folder keep working alongside it.
 
