@@ -3,6 +3,8 @@
 #include <QApplication>
 #include <QStyle>
 
+#include <cstdlib>
+
 namespace ztodo::appearance {
 
 namespace {
@@ -70,6 +72,37 @@ QPalette darkPalette()
                        QColor(0x2a, 0x9d, 0x42), QColor(0x6c, 0xb0, 0xff));
 }
 
+void styleDialogs()
+{
+    if (QApplication::style()->name().compare(QLatin1String("macos"), Qt::CaseInsensitive) == 0) {
+        return;
+    }
+    QPalette p = QApplication::palette();
+    const QColor window = p.color(QPalette::Active, QPalette::Window);
+    QColor bg;
+    QColor button = p.color(QPalette::Active, QPalette::Button);
+    if (window.lightness() < 128) {
+        bg = window.lighter(140);
+        // Buttons were only a little lighter than the window: keep them
+        // apart from the lighter dialog too.
+        if (std::abs(button.lightness() - bg.lightness()) < 16) {
+            button = bg.lighter(130);
+        }
+    } else {
+        // A light window is already close to white, so a white dialog would
+        // barely differ from it: a slightly darker grey reads more clearly.
+        bg = window.darker(110);
+        if (std::abs(button.lightness() - bg.lightness()) < 16) {
+            button = bg.darker(112);
+        }
+    }
+    p.setColor(QPalette::Window, bg);
+    p.setColor(QPalette::Button, button);
+    if (QApplication::palette("QDialog") != p) {
+        QApplication::setPalette(p, "QDialog");
+    }
+}
+
 void apply(Mode m)
 {
     Original &o = original();
@@ -84,6 +117,7 @@ void apply(Mode m)
             QApplication::setStyle(o.style);
             QApplication::setPalette(o.palette);
         }
+        styleDialogs();
         return;
     }
     o.forced = true;
@@ -92,6 +126,7 @@ void apply(Mode m)
         QApplication::setStyle(QStringLiteral("Fusion"));
     }
     QApplication::setPalette(m == Mode::Dark ? darkPalette() : lightPalette());
+    styleDialogs();
 }
 
 } // namespace ztodo::appearance

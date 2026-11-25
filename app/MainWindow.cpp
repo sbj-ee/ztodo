@@ -928,6 +928,9 @@ void MainWindow::applyFont()
 
 void MainWindow::applyTheme()
 {
+    // Dialogs too, for a theme change that came from the desktop.
+    appearance::styleDialogs();
+
     // The task list sits on the window colour rather than the (whiter or darker)
     // base colour.
     QPalette lp = m_list->palette();

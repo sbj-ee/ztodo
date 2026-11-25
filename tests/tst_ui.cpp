@@ -20,6 +20,7 @@
 #include <QMenu>
 #include <QRegularExpression>
 #include <QMenuBar>
+#include <QMessageBox>
 #include <QListWidget>
 #include <QTemporaryDir>
 #include <QTest>
@@ -88,6 +89,40 @@ private slots:
         appearance::apply(appearance::Mode::System); // back to what the platform gave us
         QCoreApplication::processEvents();
         QTRY_COMPARE(navBackground(w.nav()).lightness() < 128, before.lightness() < 128);
+    }
+
+    // A dialog (here the Help → Check for Updates message) must not have the
+    // same background as the window behind it, or it is hard to see where
+    // the window manager draws no strong frame or shadow. It also follows a
+    // theme switch while open.
+    void dialogsStandOutFromTheMainWindow()
+    {
+        QTemporaryDir data;
+        Store store;
+        QVERIFY(store.open(data.path(), "test-dev"));
+        MainWindow w(&store);
+        w.show();
+        QMessageBox box(QMessageBox::Information, "Check for Updates", "You're running the latest version.",
+                        QMessageBox::Ok, &w);
+        box.show();
+        auto contrast = [&] {
+            const QColor a = w.palette().color(QPalette::Window);
+            const QColor b = box.palette().color(QPalette::Window);
+            return std::abs(a.lightness() - b.lightness());
+        };
+        for (auto mode : {appearance::Mode::Dark, appearance::Mode::Light, appearance::Mode::Dark}) {
+            appearance::apply(mode);
+            const bool dark = mode == appearance::Mode::Dark;
+            // Dark stays dark, light stays light (waited for together with the
+            // contrast: the old dialog colour contrasts with the new window too).
+            QTRY_VERIFY2(contrast() >= 12 && (box.palette().color(QPalette::Window).lightness() < 128) == dark,
+                         qPrintable(QString::number(contrast())));
+            // The buttons still stand out from the dialog's own background.
+            const QPalette bp = box.palette();
+            QVERIFY(std::abs(bp.color(QPalette::Button).lightness() - bp.color(QPalette::Window).lightness()) >= 12);
+        }
+        appearance::apply(appearance::Mode::System);
+        QCoreApplication::processEvents();
     }
 
     void appearanceModeParsing()

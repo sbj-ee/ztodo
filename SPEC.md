@@ -1,6 +1,6 @@
 # ztodo specification
 
-Version 1.0.1. This document describes what ztodo does and the rules it keeps.
+Version 1.0.2. This document describes what ztodo does and the rules it keeps.
 It is the reference for behaviour; [README.md](README.md) is the user guide,
 [docs/STORAGE.md](docs/STORAGE.md) the on-disk format in detail, and
 [docs/RELEASING.md](docs/RELEASING.md) the release process.
@@ -284,6 +284,10 @@ dark palette and applies immediately. The sidebar and task list re-colour on any
 palette change, including a desktop theme switch. Choosing *Follow the system*
 again restores the platform's style and palette; live following of the desktop
 theme resumes after a restart. Due-date colours are lighter on a dark background.
+Dialogs get a background of their own so they stand out from the window
+behind them: the window colour made lighter on a dark palette and slightly
+darker on a light one (buttons kept apart from it). It is recomputed on every
+palette change, open dialogs included; the native macOS style is left alone.
 
 **Font.** Preferences → Font is *System default* (default) or a typeface from
 `QFontComboBox`. Preferences → Size is *Small*, *Medium* (default) or *Large*.

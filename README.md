@@ -7,9 +7,9 @@ A [Todoist](https://todoist.com)-style to-do app for **Linux (amd64)** and
 folder on **Box**, so every Mac and Linux machine you use sees the same list,
 with no account or server besides Box.
 
-**1.0.1** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
+**1.0.2** — Inbox, Today, Upcoming, projects, labels, priorities, subtasks,
 recurring tasks, natural-language quick add, search, undo, due-time reminders, productivity stats, light and dark themes, and
-signed in-app updates. The version is shown in the window title (`ztodo 1.0.1 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
+signed in-app updates. The version is shown in the window title (`ztodo 1.0.2 — Today`). Release history: [CHANGELOG.md](CHANGELOG.md).
 
 Current release: **1.0.1**
 
